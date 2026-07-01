@@ -72,7 +72,12 @@
   .pk-note{font-size:10px;color:var(--pk);margin-top:2px;}
   .next{margin-top:8px;padding-top:7px;border-top:1px dashed var(--card-line);
     font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:5px;}
-  .final-card{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--gold);}
+  .kickoff{margin-top:7px;padding-top:6px;border-top:1px dashed var(--card-line);
+    display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;font-size:10.5px;}
+  .kickoff .ko-t{color:var(--gold-soft);font-weight:700;}
+  .kickoff .cd{color:var(--live);font-weight:800;}
+  .kickoff .cd.soon{color:var(--gold);}
+    .final-card{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--gold);}
   .final-card .team{font-size:16px;}
   .trophy{font-size:28px;text-align:center;margin-bottom:6px;}
   footer{text-align:center;color:var(--muted);font-size:10.5px;padding:18px 16px 28px;}
@@ -121,46 +126,46 @@
 // --- Fallback fields hold the last known-correct result.
 const MATCHES = [
   // ROUND OF 32 (ids 73-88)
-  {id:73, round:0, label:"6/28 · 洛杉磯", home:{name:"南非",flag:"🇿🇦"}, away:{name:"加拿大",flag:"🇨🇦"}, fb:{hs:0,as:0,done:true,winner:"away"}, next:"➝ 16強第2場 對 摩洛哥"},
-  {id:74, round:0, label:"6/29 · 波士頓", home:{name:"德國",flag:"🇩🇪"}, away:{name:"巴拉圭",flag:"🇵🇾"}, fb:{hs:1,as:1,done:true,winner:"away",pk:"PK 3:4 · 大冷門，德國出局",note:true}, next:"➝ 16強第1場 對 法國"},
-  {id:75, round:0, label:"6/29 · 蒙特雷", home:{name:"荷蘭",flag:"🇳🇱"}, away:{name:"摩洛哥",flag:"🇲🇦"}, fb:{hs:1,as:1,done:true,winner:"away",pk:"PK 2:3"}, next:"➝ 16強第2場 對 加拿大"},
-  {id:76, round:0, label:"6/29 · 侯斯頓", home:{name:"巴西",flag:"🇧🇷"}, away:{name:"日本",flag:"🇯🇵"}, fb:{hs:2,as:1,done:true,winner:"home"}, next:"➝ 16強第3場 對 挪威"},
-  {id:77, round:0, label:"6/30 · 新澤西", home:{name:"法國",flag:"🇫🇷"}, away:{name:"瑞典",flag:"🇸🇪"}, fb:{hs:3,as:0,done:true,winner:"home",pk:"麥巴比梅開二度(45',74')、巴高拿(53')"}, next:"➝ 16強第1場 對 巴拉圭"},
-  {id:78, round:0, label:"6/30 · 達拉斯", home:{name:"象牙海岸",flag:"🇨🇮"}, away:{name:"挪威",flag:"🇳🇴"}, fb:{hs:1,as:2,done:true,winner:"away",pk:"夏蘭86分鐘絕殺"}, next:"➝ 16強第3場 對 巴西"},
-  {id:79, round:0, label:"6/30 · 墨西哥城", home:{name:"墨西哥",flag:"🇲🇽"}, away:{name:"厄瓜多爾",flag:"🇪🇨"}, fb:{hs:2,as:0,done:true,winner:"home",pk:"基諾尼斯(22')、L.希文尼斯(31')"}, next:"➝ 16強第4場 對 英格蘭/剛果(金)勝方"},
-  {id:80, round:0, label:"7/1 · 阿特蘭大", home:{name:"英格蘭",flag:"🏴"}, away:{name:"剛果(金)",flag:"🇨🇩"}, fb:{today:true}, next:"➝ 16強第4場 對 墨西哥"},
-  {id:81, round:0, label:"7/1 · 聖塔克拉拉", home:{name:"美國",flag:"🇺🇸"}, away:{name:"波黑",flag:"🇧🇦"}, fb:{today:true}, next:"➝ 16強第6場 對 比利時/塞內加爾勝方"},
-  {id:82, round:0, label:"7/1 · 西雅圖", home:{name:"比利時",flag:"🇧🇪"}, away:{name:"塞內加爾",flag:"🇸🇳"}, fb:{today:true}, next:"➝ 16強第6場 對 美國/波黑勝方"},
-  {id:83, round:0, label:"7/2 · 多倫多", home:{name:"葡萄牙",flag:"🇵🇹"}, away:{name:"克羅地亞",flag:"🇭🇷"}, fb:{}, next:"➝ 16強第5場 對 西班牙/奧地利勝方"},
-  {id:84, round:0, label:"7/2 · 英格尔伍德", home:{name:"西班牙",flag:"🇪🇸"}, away:{name:"奧地利",flag:"🇦🇹"}, fb:{}, next:"➝ 16強第5場 對 葡萄牙/克羅地亞勝方"},
-  {id:85, round:0, label:"7/2 · 溫哥華", home:{name:"瑞士",flag:"🇨🇭"}, away:{name:"阿爾及利亞",flag:"🇩🇿"}, fb:{}, next:"➝ 16強第8場 對 哥倫比亞/加納勝方"},
-  {id:86, round:0, label:"7/3 · 邁阿密", home:{name:"阿根廷",flag:"🇦🇷"}, away:{name:"佛德角",flag:"🇨🇻"}, fb:{}, next:"➝ 16強第7場 對 澳洲/埃及勝方"},
-  {id:87, round:0, label:"7/3 · 堪薩斯城", home:{name:"哥倫比亞",flag:"🇨🇴"}, away:{name:"加納",flag:"🇬🇭"}, fb:{}, next:"➝ 16強第8場 對 瑞士/阿爾及利亞勝方"},
-  {id:88, round:0, label:"7/3 · 阿靈頓", home:{name:"澳洲",flag:"🇦🇺"}, away:{name:"埃及",flag:"🇪🇬"}, fb:{}, next:"➝ 16強第7場 對 阿根廷/佛德角勝方"},
+  {id:73, ko:"2026-06-28T15:00:00-04:00", round:0, label:"6/28 · 洛杉磯", home:{name:"南非",flag:"🇿🇦"}, away:{name:"加拿大",flag:"🇨🇦"}, fb:{hs:0,as:0,done:true,winner:"away"}, next:"➝ 16強第2場 對 摩洛哥"},
+  {id:74, ko:"2026-06-29T16:30:00-04:00", round:0, label:"6/29 · 波士頓", home:{name:"德國",flag:"🇩🇪"}, away:{name:"巴拉圭",flag:"🇵🇾"}, fb:{hs:1,as:1,done:true,winner:"away",pk:"PK 3:4 · 大冷門，德國出局",note:true}, next:"➝ 16強第1場 對 法國"},
+  {id:75, ko:"2026-06-29T21:00:00-04:00", round:0, label:"6/29 · 蒙特雷", home:{name:"荷蘭",flag:"🇳🇱"}, away:{name:"摩洛哥",flag:"🇲🇦"}, fb:{hs:1,as:1,done:true,winner:"away",pk:"PK 2:3"}, next:"➝ 16強第2場 對 加拿大"},
+  {id:76, ko:"2026-06-29T13:00:00-04:00", round:0, label:"6/29 · 侯斯頓", home:{name:"巴西",flag:"🇧🇷"}, away:{name:"日本",flag:"🇯🇵"}, fb:{hs:2,as:1,done:true,winner:"home"}, next:"➝ 16強第3場 對 挪威"},
+  {id:77, ko:"2026-06-30T17:00:00-04:00", round:0, label:"6/30 · 新澤西", home:{name:"法國",flag:"🇫🇷"}, away:{name:"瑞典",flag:"🇸🇪"}, fb:{hs:3,as:0,done:true,winner:"home",pk:"麥巴比梅開二度(45',74')、巴高拿(53')"}, next:"➝ 16強第1場 對 巴拉圭"},
+  {id:78, ko:"2026-06-30T13:00:00-04:00", round:0, label:"6/30 · 達拉斯", home:{name:"象牙海岸",flag:"🇨🇮"}, away:{name:"挪威",flag:"🇳🇴"}, fb:{hs:1,as:2,done:true,winner:"away",pk:"夏蘭86分鐘絕殺"}, next:"➝ 16強第3場 對 巴西"},
+  {id:79, ko:"2026-06-30T21:00:00-04:00", round:0, label:"6/30 · 墨西哥城", home:{name:"墨西哥",flag:"🇲🇽"}, away:{name:"厄瓜多爾",flag:"🇪🇨"}, fb:{hs:2,as:0,done:true,winner:"home",pk:"基諾尼斯(22')、L.希文尼斯(31')"}, next:"➝ 16強第4場 對 英格蘭/剛果(金)勝方"},
+  {id:80, ko:"2026-07-01T12:00:00-04:00", round:0, label:"7/1 · 阿特蘭大", home:{name:"英格蘭",flag:"🏴"}, away:{name:"剛果(金)",flag:"🇨🇩"}, fb:{today:true}, next:"➝ 16強第4場 對 墨西哥"},
+  {id:81, ko:"2026-07-01T20:00:00-04:00", round:0, label:"7/1 · 聖塔克拉拉", home:{name:"美國",flag:"🇺🇸"}, away:{name:"波黑",flag:"🇧🇦"}, fb:{today:true}, next:"➝ 16強第6場 對 比利時/塞內加爾勝方"},
+  {id:82, ko:"2026-07-01T16:00:00-04:00", round:0, label:"7/1 · 西雅圖", home:{name:"比利時",flag:"🇧🇪"}, away:{name:"塞內加爾",flag:"🇸🇳"}, fb:{today:true}, next:"➝ 16強第6場 對 美國/波黑勝方"},
+  {id:83, ko:"2026-07-02T19:00:00-04:00", round:0, label:"7/2 · 多倫多", home:{name:"葡萄牙",flag:"🇵🇹"}, away:{name:"克羅地亞",flag:"🇭🇷"}, fb:{}, next:"➝ 16強第5場 對 西班牙/奧地利勝方"},
+  {id:84, ko:"2026-07-02T15:00:00-04:00", round:0, label:"7/2 · 英格尔伍德", home:{name:"西班牙",flag:"🇪🇸"}, away:{name:"奧地利",flag:"🇦🇹"}, fb:{}, next:"➝ 16強第5場 對 葡萄牙/克羅地亞勝方"},
+  {id:85, ko:"2026-07-02T23:00:00-04:00", round:0, label:"7/2 · 溫哥華", home:{name:"瑞士",flag:"🇨🇭"}, away:{name:"阿爾及利亞",flag:"🇩🇿"}, fb:{}, next:"➝ 16強第8場 對 哥倫比亞/加納勝方"},
+  {id:86, ko:"2026-07-03T18:00:00-04:00", round:0, label:"7/3 · 邁阿密", home:{name:"阿根廷",flag:"🇦🇷"}, away:{name:"佛德角",flag:"🇨🇻"}, fb:{}, next:"➝ 16強第7場 對 澳洲/埃及勝方"},
+  {id:87, ko:"2026-07-03T21:30:00-04:00", round:0, label:"7/3 · 堪薩斯城", home:{name:"哥倫比亞",flag:"🇨🇴"}, away:{name:"加納",flag:"🇬🇭"}, fb:{}, next:"➝ 16強第8場 對 瑞士/阿爾及利亞勝方"},
+  {id:88, ko:"2026-07-03T14:00:00-04:00", round:0, label:"7/3 · 阿靈頓", home:{name:"澳洲",flag:"🇦🇺"}, away:{name:"埃及",flag:"🇪🇬"}, fb:{}, next:"➝ 16強第7場 對 阿根廷/佛德角勝方"},
 
   // ROUND OF 16 (ids 89-96)
-  {id:89, round:1, label:"16強第1場 · 7/4 · 費城", home:{name:"巴拉圭",flag:"🇵🇾"}, away:{name:"法國",flag:"🇫🇷"}, fb:{}, next:"➝ 8強第1場 對 加拿大/摩洛哥勝方"},
-  {id:90, round:1, label:"16強第2場 · 7/4 · 侯斯頓", home:{name:"加拿大",flag:"🇨🇦"}, away:{name:"摩洛哥",flag:"🇲🇦"}, fb:{}, next:"➝ 8強第1場 對 巴拉圭/法國勝方"},
-  {id:91, round:1, label:"16強第3場 · 7/5", home:{name:"巴西",flag:"🇧🇷"}, away:{name:"挪威",flag:"🇳🇴"}, fb:{}, next:"➝ 8強第3場"},
-  {id:92, round:1, label:"16強第4場", home:{name:"墨西哥",flag:"🇲🇽"}, away:{name:"英格蘭/剛果(金)勝方"}, fb:{}, next:"➝ 8強第3場 對 巴西/挪威勝方"},
-  {id:93, round:1, label:"16強第5場", home:{name:"葡萄牙/克羅地亞勝方"}, away:{name:"西班牙/奧地利勝方"}, fb:{}, next:"➝ 8強第2場"},
-  {id:94, round:1, label:"16強第6場", home:{name:"美國/波黑勝方"}, away:{name:"比利時/塞內加爾勝方"}, fb:{}, next:"➝ 8強第2場"},
-  {id:95, round:1, label:"16強第7場", home:{name:"阿根廷/佛德角勝方"}, away:{name:"澳洲/埃及勝方"}, fb:{}, next:"➝ 8強第4場"},
-  {id:96, round:1, label:"16強第8場", home:{name:"瑞士/阿爾及利亞勝方"}, away:{name:"哥倫比亞/加納勝方"}, fb:{}, next:"➝ 8強第4場"},
+  {id:89, ko:"2026-07-04T17:00:00-04:00", round:1, label:"16強第1場 · 7/4 · 費城", home:{name:"巴拉圭",flag:"🇵🇾"}, away:{name:"法國",flag:"🇫🇷"}, fb:{}, next:"➝ 8強第1場 對 加拿大/摩洛哥勝方"},
+  {id:90, ko:"2026-07-04T13:00:00-04:00", round:1, label:"16強第2場 · 7/4 · 侯斯頓", home:{name:"加拿大",flag:"🇨🇦"}, away:{name:"摩洛哥",flag:"🇲🇦"}, fb:{}, next:"➝ 8強第1場 對 巴拉圭/法國勝方"},
+  {id:91, ko:"2026-07-05T16:00:00-04:00", round:1, label:"16強第3場 · 7/5", home:{name:"巴西",flag:"🇧🇷"}, away:{name:"挪威",flag:"🇳🇴"}, fb:{}, next:"➝ 8強第3場"},
+  {id:92, ko:"2026-07-05T20:00:00-04:00", round:1, label:"16強第4場", home:{name:"墨西哥",flag:"🇲🇽"}, away:{name:"英格蘭/剛果(金)勝方"}, fb:{}, next:"➝ 8強第3場 對 巴西/挪威勝方"},
+  {id:93, ko:"2026-07-06T15:00:00-04:00", round:1, label:"16強第5場", home:{name:"葡萄牙/克羅地亞勝方"}, away:{name:"西班牙/奧地利勝方"}, fb:{}, next:"➝ 8強第2場"},
+  {id:94, ko:"2026-07-06T20:00:00-04:00", round:1, label:"16強第6場", home:{name:"美國/波黑勝方"}, away:{name:"比利時/塞內加爾勝方"}, fb:{}, next:"➝ 8強第2場"},
+  {id:95, ko:"2026-07-07T12:00:00-04:00", round:1, label:"16強第7場", home:{name:"阿根廷/佛德角勝方"}, away:{name:"澳洲/埃及勝方"}, fb:{}, next:"➝ 8強第4場"},
+  {id:96, ko:"2026-07-07T16:00:00-04:00", round:1, label:"16強第8場", home:{name:"瑞士/阿爾及利亞勝方"}, away:{name:"哥倫比亞/加納勝方"}, fb:{}, next:"➝ 8強第4場"},
 
   // QUARTERFINALS (ids 97-100)
-  {id:97, round:2, label:"8強第1場", home:{name:"巴拉圭/法國/加/摩 一方"}, away:{name:"—"}, fb:{}, next:"➝ 4強第1場"},
-  {id:98, round:2, label:"8強第2場", home:{name:"葡/克/西/奧 一方"}, away:{name:"美/波/比/塞 一方"}, fb:{}, next:"➝ 4強第1場"},
-  {id:99, round:2, label:"8強第3場", home:{name:"巴/挪/墨/英/剛 一方"}, away:{name:"—"}, fb:{}, next:"➝ 4強第2場"},
-  {id:100, round:2, label:"8強第4場", home:{name:"阿/佛/澳/埃 一方"}, away:{name:"瑞/阿爾/哥/加 一方"}, fb:{}, next:"➝ 4強第2場"},
+  {id:97, ko:"2026-07-09T16:00:00-04:00", round:2, label:"8強第1場", home:{name:"巴拉圭/法國/加/摩 一方"}, away:{name:"—"}, fb:{}, next:"➝ 4強第1場"},
+  {id:98, ko:"2026-07-10T15:00:00-04:00", round:2, label:"8強第2場", home:{name:"葡/克/西/奧 一方"}, away:{name:"美/波/比/塞 一方"}, fb:{}, next:"➝ 4強第1場"},
+  {id:99, ko:"2026-07-11T17:00:00-04:00", round:2, label:"8強第3場", home:{name:"巴/挪/墨/英/剛 一方"}, away:{name:"—"}, fb:{}, next:"➝ 4強第2場"},
+  {id:100, ko:"2026-07-11T21:00:00-04:00", round:2, label:"8強第4場", home:{name:"阿/佛/澳/埃 一方"}, away:{name:"瑞/阿爾/哥/加 一方"}, fb:{}, next:"➝ 4強第2場"},
 
   // SEMIFINALS (ids 101-102)
-  {id:101, round:3, label:"4強第1場", home:{name:"8強第1場 勝方"}, away:{name:"8強第2場 勝方"}, fb:{}, next:"➝ 決賽 / 季軍戰"},
-  {id:102, round:3, label:"4強第2場", home:{name:"8強第3場 勝方"}, away:{name:"8強第4場 勝方"}, fb:{}, next:"➝ 決賽 / 季軍戰"},
+  {id:101, ko:"2026-07-14T15:00:00-04:00", round:3, label:"4強第1場", home:{name:"8強第1場 勝方"}, away:{name:"8強第2場 勝方"}, fb:{}, next:"➝ 決賽 / 季軍戰"},
+  {id:102, ko:"2026-07-15T15:00:00-04:00", round:3, label:"4強第2場", home:{name:"8強第3場 勝方"}, away:{name:"8強第4場 勝方"}, fb:{}, next:"➝ 決賽 / 季軍戰"},
 
   // THIRD PLACE + FINAL (ids 103-104)
-  {id:104, round:4, label:"決賽 · 7/19 · MetLife Stadium", home:{name:"4強第1場 勝方"}, away:{name:"4強第2場 勝方"}, fb:{}, isFinal:true},
-  {id:103, round:4, label:"季軍戰 · 7/18", home:{name:"4強第1場 負方"}, away:{name:"4強第2場 負方"}, fb:{}},
+  {id:104, ko:"2026-07-19T15:00:00-04:00", round:4, label:"決賽 · 7/19 · MetLife Stadium", home:{name:"4強第1場 勝方"}, away:{name:"4強第2場 勝方"}, fb:{}, isFinal:true},
+  {id:103, ko:"2026-07-18T17:00:00-04:00", round:4, label:"季軍戰 · 7/18", home:{name:"4強第1場 負方"}, away:{name:"4強第2場 負方"}, fb:{}},
 ];
 
 const ROUND_META = [
@@ -210,6 +215,36 @@ function teamRow(team, score, cls){
   return `<div class="team ${cls}"><span class="name">${flag}${team.name}</span>${scoreHtml}</div>`;
 }
 
+function formatHK(iso){
+  const d=new Date(iso);
+  const p={};
+  new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Hong_Kong",month:"numeric",day:"numeric",
+    hour:"2-digit",minute:"2-digit",hourCycle:"h23",weekday:"short"}).formatToParts(d).forEach(x=>p[x.type]=x.value);
+  const wd={Mon:"一",Tue:"二",Wed:"三",Thu:"四",Fri:"五",Sat:"六",Sun:"日"};
+  return `${p.month}/${p.day}(${wd[p.weekday]||p.weekday}) ${p.hour}:${p.minute}`;
+}
+function cdText(iso, done, live){
+  if(done||live) return {t:"",soon:false};
+  let diff = new Date(iso).getTime() - Date.now();
+  if(diff<=0) return {t:"即將開賽",soon:true};
+  const day=86400000,hr=3600000,mn=60000;
+  const d=Math.floor(diff/day); diff-=d*day;
+  const h=Math.floor(diff/hr); diff-=h*hr;
+  const m=Math.floor(diff/mn);
+  let t;
+  if(d>0) t=`⏳ ${d}日${h}小時後開賽`;
+  else if(h>0) t=`⏳ ${h}小時${m}分後開賽`;
+  else t=`⏳ ${m}分鐘後開賽`;
+  return {t, soon:(d===0)};
+}
+function tickCd(){
+  document.querySelectorAll(".cd").forEach(el=>{
+    const r=cdText(el.dataset.ko, el.dataset.done==="1", el.dataset.live==="1");
+    el.textContent=r.t;
+    el.classList.toggle("soon", !!r.soon);
+  });
+}
+
 function render(liveById){
   const main = document.getElementById("main");
   main.innerHTML = "";
@@ -233,6 +268,7 @@ function render(liveById){
       else { hs=""; as=""; }
 
       const pkNote = st.pk ? `<div class="pk-note">⚽ ${st.pk}</div>` : "";
+      const koNote = m.ko ? `<div class="kickoff"><span class="ko-t">🕒 港時 ${formatHK(m.ko)}</span><span class="cd" data-ko="${m.ko}" data-done="${st.done?1:0}" data-live="${st.livenow?1:0}"></span></div>` : "";
       const nextNote = m.next ? `<div class="next">${m.next}</div>` : "";
       const trophy = m.isFinal ? `<div class="trophy">🏆</div>` : "";
       const cardCls = m.isFinal ? `match ${cls} final-card` : `match ${cls}`;
@@ -245,12 +281,13 @@ function render(liveById){
             ${teamRow(m.home, (st.done||st.livenow)?hs:(st.today?"–":""), hCls)}
             ${teamRow(m.away, (st.done||st.livenow)?as:(st.today?"–":""), aCls)}
           </div>
-          ${pkNote}${nextNote}
+          ${koNote}${pkNote}${nextNote}
         </div>`;
     });
     main.appendChild(sec);
   }
   wireNav();
+  tickCd();
 }
 
 function setStatus(kind, text){
@@ -307,6 +344,7 @@ function wireNav(){
 
 document.getElementById("refresh-btn").onclick=loadLive;
 loadLive();
+setInterval(tickCd, 30000);
 </script>
 </body>
 </html>
