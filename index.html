@@ -281,6 +281,17 @@ function tickCd(){
 
 let TEAM_GAMES = {};
 const ZH = {"1":"墨西哥","2":"南非","3":"南韓","4":"捷克","5":"加拿大","6":"波黑","7":"卡塔爾","8":"瑞士","9":"巴西","10":"摩洛哥","11":"海地","12":"蘇格蘭","13":"美國","14":"巴拉圭","15":"澳洲","16":"土耳其","17":"德國","18":"庫拉索","19":"象牙海岸","20":"厄瓜多爾","21":"荷蘭","22":"日本","23":"瑞典","24":"突尼西亞","25":"比利時","26":"埃及","27":"伊朗","28":"紐西蘭","29":"西班牙","30":"佛德角","31":"沙特阿拉伯","32":"烏拉圭","33":"法國","34":"塞內加爾","35":"伊拉克","36":"挪威","37":"阿根廷","38":"阿爾及利亞","39":"奧地利","40":"約旦","41":"葡萄牙","42":"剛果(金)","43":"烏茲別克","44":"哥倫比亞","45":"英格蘭","46":"克羅地亞","47":"加納","48":"巴拿馬"};
+const FLAG={"1":"🇲🇽","2":"🇿🇦","3":"🇰🇷","4":"🇨🇿","5":"🇨🇦","6":"🇧🇦","7":"🇶🇦","8":"🇨🇭","9":"🇧🇷","10":"🇲🇦","11":"🇭🇹","12":"🏴","13":"🇺🇸","14":"🇵🇾","15":"🇦🇺","16":"🇹🇷","17":"🇩🇪","18":"🇨🇼","19":"🇨🇮","20":"🇪🇨","21":"🇳🇱","22":"🇯🇵","23":"🇸🇪","24":"🇹🇳","25":"🇧🇪","26":"🇪🇬","27":"🇮🇷","28":"🇳🇿","29":"🇪🇸","30":"🇨🇻","31":"🇸🇦","32":"🇺🇾","33":"🇫🇷","34":"🇸🇳","35":"🇮🇶","36":"🇳🇴","37":"🇦🇷","38":"🇩🇿","39":"🇦🇹","40":"🇯🇴","41":"🇵🇹","42":"🇨🇩","43":"🇺🇿","44":"🇨🇴","45":"🏴","46":"🇭🇷","47":"🇬🇭","48":"🇵🇦"};
+function resolveTeam(m, side, g){
+  const isH = side==="home";
+  const tid = g ? (isH? g.home_team_id : g.away_team_id) : null;
+  const en  = g ? (isH? g.home_team_name_en : g.away_team_name_en) : null;
+  if(tid && tid!=="0" && tid!=="null" && (ZH[tid]||en)){
+    return { name: ZH[tid] || en, flag: FLAG[tid] || (m[side]&&m[side].flag) || "" };
+  }
+  return m[side] || {name:"—", flag:""};
+}
+
 function stageLabel(g){
   if(g.type==="group") return "分組"+(g.matchday?("第"+g.matchday+"輪"):"");
   const id=+g.id;
@@ -326,24 +337,26 @@ function liveMinute(g){
 }
 function liveCardHTML(m, st, g){
   const minute=liveMinute(g);
+  const home=resolveTeam(m,"home",g), away=resolveTeam(m,"away",g);
   const hsc=g?parseScorers(g.home_scorers):[];
   const asc=g?parseScorers(g.away_scorers):[];
   const hs=(st.hs??"–"), as=(st.as??"–");
   const scLine=(hsc.length||asc.length)
-    ? `<div class="fl-scorers">⚽ ${m.home.name}：${hsc.join("、")||"—"}　｜　${m.away.name}：${asc.join("、")||"—"}</div>`
+    ? `<div class="fl-scorers">⚽ ${home.name}：${hsc.join("、")||"—"}　｜　${away.name}：${asc.join("、")||"—"}</div>`
     : "";
   return `<div class="focus-live">
     <div class="fl-top"><span class="badge livenow">● 進行中 ${minute}</span><span class="fl-label">${m.label}</span></div>
     <div class="fl-teams">
-      <div class="fl-team"><span class="fl-name">${m.home.flag||""} ${m.home.name}</span><span class="fl-score">${hs}</span></div>
-      <div class="fl-team"><span class="fl-name">${m.away.flag||""} ${m.away.name}</span><span class="fl-score">${as}</span></div>
+      <div class="fl-team"><span class="fl-name">${home.flag||""} ${home.name}</span><span class="fl-score">${hs}</span></div>
+      <div class="fl-team"><span class="fl-name">${away.flag||""} ${away.name}</span><span class="fl-score">${as}</span></div>
     </div>
     ${scLine}
   </div>`;
 }
-function focusRow(m){
+function focusRow(m, g){
+  const home=resolveTeam(m,"home",g), away=resolveTeam(m,"away",g);
   return `<div class="focus-row">
-    <span class="fr-teams">${m.home.flag||""} ${m.home.name}<span class="fr-vs">vs</span>${m.away.flag||""} ${m.away.name}</span>
+    <span class="fr-teams">${home.flag||""} ${home.name}<span class="fr-vs">vs</span>${away.flag||""} ${away.name}</span>
     <span class="fr-time">🕒 ${formatHK(m.ko)}</span>
     <span class="cd fr-cd" data-ko="${m.ko}" data-done="0" data-live="0"></span>
   </div>`;
@@ -364,7 +377,7 @@ function renderFocus(liveById){
   const nextN=upcoming.slice(0,4);
   if(nextN.length){
     html += `<div class="focus-sub">接下來（依港時由近至遠）</div>`;
-    html += nextN.map(x=>focusRow(x.m)).join("");
+    html += nextN.map(x=>focusRow(x.m, x.g)).join("");
   }
   if(!live.length && !nextN.length){
     html += `<div class="focus-sub">🏆 淘汰賽已全部完成</div>`;
@@ -384,6 +397,8 @@ function render(liveById){
       const g = liveById[String(m.id)];
       const homeId = g ? g.home_team_id : null;
       const awayId = g ? g.away_team_id : null;
+      const homeT = resolveTeam(m,"home",g);
+      const awayT = resolveTeam(m,"away",g);
       const homePanel = hasFinished(homeId)?`<div class="journey" id="jr-${m.id}-h" hidden>${journeyHTML(homeId)}</div>`:"";
       const awayPanel = hasFinished(awayId)?`<div class="journey" id="jr-${m.id}-a" hidden>${journeyHTML(awayId)}</div>`:"";
       let cls="tbd", badge=`<span class="badge tbd">未開賽</span>`;
@@ -410,9 +425,9 @@ function render(liveById){
           ${trophy}
           <div class="meta"><span>${m.label}</span>${badge}</div>
           <div class="teams">
-            ${teamRow(m.home, (st.done||st.livenow)?hs:(st.today?"–":""), hCls, homeId, "jr-"+m.id+"-h")}
+            ${teamRow(homeT, (st.done||st.livenow)?hs:(st.today?"–":""), hCls, homeId, "jr-"+m.id+"-h")}
             ${homePanel}
-            ${teamRow(m.away, (st.done||st.livenow)?as:(st.today?"–":""), aCls, awayId, "jr-"+m.id+"-a")}
+            ${teamRow(awayT, (st.done||st.livenow)?as:(st.today?"–":""), aCls, awayId, "jr-"+m.id+"-a")}
             ${awayPanel}
           </div>
           ${koNote}${pkNote}${nextNote}
