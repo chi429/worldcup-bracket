@@ -87,6 +87,25 @@
   .jr-sc{font-weight:800;flex:0 0 auto;}
   .jr-sc.w{color:var(--win);} .jr-sc.l{color:var(--live);} .jr-sc.d{color:var(--pk);}
   .jr-empty{font-size:10.5px;color:var(--muted);}
+    #focus{padding:12px 16px 6px;border-bottom:1px solid var(--card-line);
+    background:linear-gradient(180deg,rgba(13,48,36,.5),transparent);}
+  .focus-head{font-size:13px;font-weight:800;color:var(--gold-soft);letter-spacing:.5px;margin-bottom:9px;}
+  .focus-sub{font-size:11px;color:var(--muted);margin:11px 0 5px;}
+  .focus-live{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--live);
+    border-radius:12px;padding:11px 13px;margin-bottom:6px;box-shadow:0 0 0 1px rgba(226,102,75,.35);}
+  .fl-top{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+  .fl-label{font-size:10.5px;color:var(--muted);}
+  .fl-teams{display:flex;flex-direction:column;gap:5px;}
+  .fl-team{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:700;}
+  .fl-name{display:flex;align-items:center;gap:7px;}
+  .fl-score{font-size:19px;font-weight:800;color:var(--gold-soft);}
+  .fl-scorers{margin-top:8px;padding-top:7px;border-top:1px dashed var(--card-line);font-size:10.5px;color:var(--muted);line-height:1.5;}
+  .focus-row{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid rgba(29,77,58,.45);font-size:11.5px;}
+  .focus-row:last-child{border-bottom:none;}
+  .fr-teams{flex:1;color:var(--text);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .fr-vs{color:var(--muted);font-size:10px;margin:0 3px;}
+  .fr-time{color:var(--gold-soft);flex:0 0 auto;font-weight:700;font-size:10.5px;}
+  .fr-cd{color:var(--live);font-weight:800;flex:0 0 auto;font-size:10.5px;min-width:70px;text-align:right;}
     .final-card{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--gold);}
   .final-card .team{font-size:16px;}
   .trophy{font-size:28px;text-align:center;margin-bottom:6px;}
@@ -112,6 +131,8 @@
     <button data-i="4">決賽</button>
   </nav>
 </header>
+
+<section id="focus"></section>
 
 <main id="main"></main>
 
@@ -288,6 +309,69 @@ function journeyHTML(tid){
   return rows;
 }
 
+function parseScorers(s){
+  if(!s || s==="null") return [];
+  const out=[]; const re=/["“”]([^"“”]+)["“”]/g; let m;
+  while((m=re.exec(s))!==null){ out.push(m[1].trim()); }
+  return out;
+}
+function liveMinute(g){
+  if(!g || !g.time_elapsed) return "";
+  const te=String(g.time_elapsed);
+  if(/^\d+$/.test(te)) return te+"'";
+  const low=te.toLowerCase();
+  if(low==="ht") return "半場";
+  if(low==="notstarted"||low==="finished"||low==="live") return "";
+  return te;
+}
+function liveCardHTML(m, st, g){
+  const minute=liveMinute(g);
+  const hsc=g?parseScorers(g.home_scorers):[];
+  const asc=g?parseScorers(g.away_scorers):[];
+  const hs=(st.hs??"–"), as=(st.as??"–");
+  const scLine=(hsc.length||asc.length)
+    ? `<div class="fl-scorers">⚽ ${m.home.name}：${hsc.join("、")||"—"}　｜　${m.away.name}：${asc.join("、")||"—"}</div>`
+    : "";
+  return `<div class="focus-live">
+    <div class="fl-top"><span class="badge livenow">● 進行中 ${minute}</span><span class="fl-label">${m.label}</span></div>
+    <div class="fl-teams">
+      <div class="fl-team"><span class="fl-name">${m.home.flag||""} ${m.home.name}</span><span class="fl-score">${hs}</span></div>
+      <div class="fl-team"><span class="fl-name">${m.away.flag||""} ${m.away.name}</span><span class="fl-score">${as}</span></div>
+    </div>
+    ${scLine}
+  </div>`;
+}
+function focusRow(m){
+  return `<div class="focus-row">
+    <span class="fr-teams">${m.home.flag||""} ${m.home.name}<span class="fr-vs">vs</span>${m.away.flag||""} ${m.away.name}</span>
+    <span class="fr-time">🕒 ${formatHK(m.ko)}</span>
+    <span class="cd fr-cd" data-ko="${m.ko}" data-done="0" data-live="0"></span>
+  </div>`;
+}
+function renderFocus(liveById){
+  const box=document.getElementById("focus");
+  if(!box) return;
+  const items=MATCHES.map(m=>({m, st:resolveMatch(m, liveById), g:liveById[String(m.id)]}));
+  const live=items.filter(x=>x.st.livenow);
+  const now=Date.now();
+  const upcoming=items
+    .filter(x=>!x.st.livenow && !x.st.done && x.m.ko && (new Date(x.m.ko).getTime() > now - 3*3600000))
+    .sort((a,b)=> new Date(a.m.ko) - new Date(b.m.ko));
+  let html=`<div class="focus-head">🎯 焦點賽事</div>`;
+  if(live.length){
+    html += live.map(x=>liveCardHTML(x.m, x.st, x.g)).join("");
+  }
+  const nextN=upcoming.slice(0,4);
+  if(nextN.length){
+    html += `<div class="focus-sub">接下來（依港時由近至遠）</div>`;
+    html += nextN.map(x=>focusRow(x.m)).join("");
+  }
+  if(!live.length && !nextN.length){
+    html += `<div class="focus-sub">🏆 淘汰賽已全部完成</div>`;
+  }
+  box.innerHTML=html;
+}
+
 function render(liveById){
   const main = document.getElementById("main");
   main.innerHTML = "";
@@ -334,6 +418,7 @@ function render(liveById){
     });
     main.appendChild(sec);
   }
+  renderFocus(liveById);
   wireNav();
   tickCd();
 }
