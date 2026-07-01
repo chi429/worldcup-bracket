@@ -491,11 +491,12 @@ function render(liveById){
     sec.innerHTML = `<div class="round-head"><h2>${ROUND_META[r].title}</h2><span>${ROUND_META[r].note}</span></div>`;
     MATCHES.filter(m=>m.round===r)
       .slice()
-      .sort((a,b)=>{  // closest kickoff to the current time first; TBD matches last
-        const now=Date.now();
-        const da=a.ko?Math.abs(new Date(a.ko).getTime()-now):Infinity;
-        const db=b.ko?Math.abs(new Date(b.ko).getTime()-now):Infinity;
-        return da-db;
+      .sort((a,b)=>{  // not-finished on top (soonest first, so today's/live lead); finished at bottom (oldest first)
+        const sa=resolveMatch(a,liveById), sb=resolveMatch(b,liveById);
+        if(sa.done!==sb.done) return sa.done?1:-1;
+        const ta=a.ko?new Date(a.ko).getTime():Infinity;
+        const tb=b.ko?new Date(b.ko).getTime():Infinity;
+        return ta-tb;
       })
       .forEach(m=>{
       const st = resolveMatch(m, liveById);
