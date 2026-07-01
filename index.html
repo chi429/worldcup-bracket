@@ -420,34 +420,66 @@ function addGoal(tally, entry, tid){
   if(!tally[key]) tally[key]={name, tid, goals:0};
   tally[key].goals++;
 }
-// Accurate figures from HKET (香港經濟日報) worldcup2026 statistics page — dated snapshot.
-const TOP_SCORERS=[
-  {r:1,name:"Kylian Mbappe",flag:"🇫🇷",g:6},
-  {r:1,name:"Lionel Messi",flag:"🇦🇷",g:6},
-  {r:3,name:"Erling Haaland",flag:"🇳🇴",g:5},
-  {r:4,name:"Vinicius Junior",flag:"🇧🇷",g:4},
-  {r:4,name:"Ousmane Dembele",flag:"🇫🇷",g:4},
-];
+// The live feed round-trips some names through Persian and mangles the rarer
+// ones; this map restores the correct spelling and normalises accents to ASCII.
+const NAME_FIX={
+  "Kylian Mbappé":"Kylian Mbappe",
+  "Ousmane Dembélé":"Ousmane Dembele",
+  "Ismaïla Sarr":"Ismaila Sarr",
+  "Vinícius Júnior":"Vinicius Junior",
+  "Hri Kin":"Harry Kane",
+  "Kvdi Khakpv":"Cody Gakpo",
+  "Jvhan Mnzambi":"Johan Manzambi",
+};
+function fixName(n){ return NAME_FIX[n] || n; }
+const SCORER_LIMIT=12; // show every player with 3+ goals (matches source ranking)
+
+// Assists — the live feed carries no assist data, so this board stays curated.
 const TOP_ASSISTS=[
-  {r:1,name:"Michael Olise",flag:"🇫🇷",g:5},
-  {r:2,name:"Bruno Guimaraes",flag:"🇧🇷",g:4},
-  {r:3,name:"Alexander Isak",flag:"🇸🇪",g:3},
-  {r:3,name:"Florian Wirtz",flag:"🇩🇪",g:3},
-  {r:3,name:"Martin Odegaard",flag:"🇳🇴",g:3},
+  {r:1,name:"Michael Olise",flag:"🇫🇷",team:"法國",g:5},
+  {r:2,name:"Bruno Guimaraes",flag:"🇧🇷",team:"巴西",g:4},
+  {r:3,name:"Alexander Isak",flag:"🇸🇪",team:"瑞典",g:3},
+  {r:3,name:"Florian Wirtz",flag:"🇩🇪",team:"德國",g:3},
+  {r:3,name:"Martin Odegaard",flag:"🇳🇴",team:"挪威",g:3},
+];
+// Fallback scorers if the live feed is unavailable.
+const TOP_SCORERS_FB=[
+  {name:"Lionel Messi",flag:"🇦🇷",team:"阿根廷",g:6},
+  {name:"Erling Haaland",flag:"🇳🇴",team:"挪威",g:5},
+  {name:"Kylian Mbappe",flag:"🇫🇷",team:"法國",g:4},
+  {name:"Ousmane Dembele",flag:"🇫🇷",team:"法國",g:4},
+  {name:"Brian Brobbey",flag:"🇳🇱",team:"荷蘭",g:3},
 ];
 const SCORER_ASOF="7/2";
-function lbRows(list){
-  return list.map(p=>`<div class="lb-row"><span class="lb-rank">${p.r}</span><span class="lb-name">${p.flag} ${p.name}</span><span class="lb-goals">${p.g}</span></div>`).join("");
+
+function boardRow(rank, flag, name, team, val){
+  return `<div class="lb-row"><span class="lb-rank">${rank}</span><span class="lb-name">${flag} ${name}</span><span class="lb-team">${team}</span><span class="lb-goals">${val}</span></div>`;
 }
-function scorerBoardHTML(){
-  return `<div class="round-head"><h2>射手榜 & 助攻榜</h2><span>頭5名</span></div>`
-    + `<div class="lb-sec">⚽ 射手榜</div>`
-    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-goals">入球</span></div>`
-    + lbRows(TOP_SCORERS)
-    + `<div class="lb-sec">🅰️ 助攻榜</div>`
-    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-goals">助攻</span></div>`
-    + lbRows(TOP_ASSISTS)
-    + `<div class="jr-empty" style="margin-top:14px">資料來源：香港經濟日報 HKET · 截至 ${SCORER_ASOF}</div>`;
+function scorerBoardHTML(liveById){
+  const tally={};
+  Object.keys(liveById||{}).forEach(id=>{
+    const g=liveById[id];
+    parseScorers(g.home_scorers).forEach(e=>addGoal(tally,e,g.home_team_id));
+    parseScorers(g.away_scorers).forEach(e=>addGoal(tally,e,g.away_team_id));
+  });
+  const arr=Object.values(tally).map(p=>({name:fixName(p.name),flag:FLAG[p.tid]||"",team:ZH[p.tid]||"",g:p.goals}));
+  const total=arr.length;
+  let rows, headCount;
+  if(total){
+    arr.sort((a,b)=> b.g-a.g || a.name.localeCompare(b.name));
+    rows=arr.slice(0,SCORER_LIMIT).map((p,i)=>boardRow(i+1,p.flag,p.name,p.team,p.g)).join("");
+    headCount=`${total} 位入球球員`;
+  }else{
+    rows=TOP_SCORERS_FB.map((p,i)=>boardRow(i+1,p.flag,p.name,p.team,p.g)).join("");
+    headCount=`頭 ${TOP_SCORERS_FB.length} 名`;
+  }
+  return `<div class="round-head"><h2>射手榜 (Top Scorers)</h2><span>${headCount}</span></div>`
+    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-team">球隊</span><span class="lb-goals">入球</span></div>`
+    + rows
+    + `<div class="lb-sec">🅰️ 助攻榜 (Top Assists)</div>`
+    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-team">球隊</span><span class="lb-goals">助攻</span></div>`
+    + TOP_ASSISTS.map(p=>boardRow(p.r,p.flag,p.name,p.team,p.g)).join("")
+    + `<div class="jr-empty" style="margin-top:14px">射手榜：即時比賽數據 · 助攻榜：香港經濟日報 HKET · 截至 ${SCORER_ASOF}</div>`;
 }
 
 function render(liveById){
@@ -502,7 +534,7 @@ function render(liveById){
   }
   const lb=document.createElement("section");
   lb.className="round";
-  lb.innerHTML=scorerBoardHTML();
+  lb.innerHTML=scorerBoardHTML(liveById);
   main.appendChild(lb);
   renderFocus(liveById);
   wireNav();
