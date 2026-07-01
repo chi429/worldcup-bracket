@@ -59,6 +59,8 @@
   .badge.livenow{background:var(--live);color:#fff;animation:pulse 1.1s infinite;}
   .badge.pk{background:rgba(201,147,63,.2);color:var(--pk);}
   .badge.tbd{background:rgba(143,171,156,.15);color:var(--muted);}
+  .badge-grp{display:inline-flex;align-items:center;gap:6px;}
+  .live-min{font-size:9.5px;font-weight:800;color:var(--live);white-space:nowrap;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
   .teams{display:flex;flex-direction:column;gap:5px;}
   .team{display:flex;align-items:center;justify-content:space-between;font-size:14.5px;}
@@ -94,7 +96,8 @@
   .focus-live{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--live);
     border-radius:12px;padding:11px 13px;margin-bottom:6px;box-shadow:0 0 0 1px rgba(226,102,75,.35);}
   .fl-top{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
-  .fl-label{font-size:10.5px;color:var(--muted);}
+  .fl-min{font-size:11px;font-weight:800;color:var(--live);white-space:nowrap;}
+  .fl-label{font-size:10.5px;color:var(--muted);margin-left:auto;}
   .fl-teams{display:flex;flex-direction:column;gap:5px;}
   .fl-team{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:700;}
   .fl-name{display:flex;align-items:center;gap:7px;}
@@ -348,17 +351,35 @@ function parseScorers(s){
   while((m=re.exec(s))!==null){ out.push(m[1].trim()); }
   return out;
 }
-function liveMinute(g){
-  if(!g || !g.time_elapsed) return "";
-  const te=String(g.time_elapsed);
-  if(/^\d+$/.test(te)) return te+"'";
+// Derive the phase (上/下半場、加時、半場休息…) and elapsed-minute label from the
+// feed's time_elapsed field. Returns {half, min, text}; text is the combined
+// label to show, e.g. "下半場 67'".
+function liveClock(g){
+  if(!g || g.time_elapsed==null) return {half:"", min:"", text:""};
+  const te=String(g.time_elapsed).trim();
   const low=te.toLowerCase();
-  if(low==="ht") return "半場";
-  if(low==="notstarted"||low==="finished"||low==="live") return "";
-  return te;
+  if(/^\d+$/.test(te)){
+    const n=parseInt(te,10);
+    let half;
+    if(n<=45) half="上半場";
+    else if(n<=90) half="下半場";
+    else if(n<=105) half="加時上半場";
+    else if(n<=120) half="加時下半場";
+    else half="加時";
+    const min=n+"'";
+    return {half, min, text:`${half} ${min}`};
+  }
+  if(low==="ht"||low==="bt"||low==="break") return {half:"半場休息", min:"", text:"半場休息"};
+  if(low==="et") return {half:"加時", min:"", text:"加時"};
+  if(low==="p"||low==="pen"||low==="pens"||low==="penalties"||low==="pk") return {half:"互射十二碼", min:"", text:"互射十二碼"};
+  if(low==="notstarted"||low==="finished"||low==="live"||!te) return {half:"", min:"", text:""};
+  return {half:"", min:te, text:te};
 }
+// Backward-compatible minute label used elsewhere.
+function liveMinute(g){ return liveClock(g).min; }
 function liveCardHTML(m, st, g){
-  const minute=liveMinute(g);
+  const clock=liveClock(g);
+  const clockChip=clock.text?`<span class="fl-min">⏱ ${clock.text}</span>`:"";
   const home=resolveTeam(m,"home",g), away=resolveTeam(m,"away",g);
   const hsc=g?parseScorers(g.home_scorers):[];
   const asc=g?parseScorers(g.away_scorers):[];
@@ -368,7 +389,7 @@ function liveCardHTML(m, st, g){
     ? `<div class="fl-scorers"><div class="gl-title">⚽ 入球</div>${goalList(hsc, home.flag||"")}${goalList(asc, away.flag||"")}</div>`
     : "";
   return `<div class="focus-live">
-    <div class="fl-top"><span class="badge livenow">● 進行中 ${minute}</span><span class="fl-label">${m.label}</span></div>
+    <div class="fl-top"><span class="badge livenow">● 進行中</span>${clockChip}<span class="fl-label">${m.label}</span></div>
     <div class="fl-teams">
       <div class="fl-team"><span class="fl-name">${home.flag||""} ${home.name}</span><span class="fl-score">${hs}</span></div>
       <div class="fl-team"><span class="fl-name">${away.flag||""} ${away.name}</span><span class="fl-score">${as}</span></div>
@@ -508,7 +529,7 @@ function render(liveById){
       const homePanel = hasFinished(homeId)?`<div class="journey" id="jr-${m.id}-h" hidden>${journeyHTML(homeId)}</div>`:"";
       const awayPanel = hasFinished(awayId)?`<div class="journey" id="jr-${m.id}-a" hidden>${journeyHTML(awayId)}</div>`:"";
       let cls="tbd", badge=`<span class="badge tbd">未開賽</span>`;
-      if(st.livenow){cls="livenow"; badge=`<span class="badge livenow">● 進行中</span>`;}
+      if(st.livenow){cls="livenow"; const ck=liveClock(g); badge=`<span class="badge-grp">${ck.text?`<span class="live-min">⏱ ${ck.text}</span>`:""}<span class="badge livenow">● 進行中</span></span>`;}
       else if(st.done){cls="done"; badge=st.pk&&/PK/.test(st.pk)?`<span class="badge pk">PK大戰</span>`:`<span class="badge done">已完場</span>`;}
       else if(st.today){cls="today"; badge=`<span class="badge today">今日</span>`;}
 
