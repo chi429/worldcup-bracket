@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026世界盃 16強晉級樹 (自動更新)</title>
+<style>
+  :root{
+    --bg:#0a2419; --bg2:#0d3024; --card:#11352a; --card-line:#1d4d3a; --card-hi:#163d2f;
+    --gold:#e0b34a; --gold-soft:#f3d896; --text:#f2efe2; --muted:#8fab9c;
+    --live:#e2664b; --pk:#c9933f; --win:#5fae7e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: radial-gradient(ellipse at top, var(--bg2), var(--bg) 60%);
+    color:var(--text);
+    font-family:"Helvetica Neue","PingFang HK","Noto Sans HK",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .pitch-lines{position:fixed;inset:0;pointer-events:none;opacity:.05;z-index:0;
+    background-image:repeating-linear-gradient(90deg,transparent 0 120px,rgba(255,255,255,.6) 120px 121px);}
+  header{position:sticky;top:0;z-index:20;
+    background:linear-gradient(180deg,rgba(10,36,25,.97),rgba(10,36,25,.88));
+    backdrop-filter:blur(6px);padding:14px 16px 10px;border-bottom:1px solid var(--card-line);}
+  .title-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  h1{font-size:18px;margin:0;letter-spacing:.5px;color:var(--gold-soft);font-weight:800;}
+  .sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .status-bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+  .dot.ok{background:var(--win);}
+  .dot.stale{background:var(--pk);}
+  .dot.loading{background:var(--muted);animation:pulse 1.2s infinite;}
+  #status-text{color:var(--muted);flex:1;}
+  #refresh-btn{background:var(--card);border:1px solid var(--card-line);color:var(--gold-soft);
+    font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;}
+  #refresh-btn:active{transform:scale(.96);}
+  nav{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+  nav::-webkit-scrollbar{display:none;}
+  nav button{flex:0 0 auto;background:var(--card);border:1px solid var(--card-line);
+    color:var(--muted);font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;white-space:nowrap;cursor:pointer;}
+  nav button.active{background:var(--gold);color:#1a1304;border-color:var(--gold);}
+  main{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  main::-webkit-scrollbar{display:none;}
+  .round{scroll-snap-align:start;flex:0 0 100%;max-width:430px;padding:16px 16px 36px;}
+  .round-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .round-head h2{font-size:15px;margin:0;color:var(--gold-soft);letter-spacing:.5px;}
+  .round-head span{font-size:11px;color:var(--muted);}
+  .match{background:var(--card);border:1px solid var(--card-line);border-radius:12px;
+    padding:11px 12px;margin-bottom:10px;position:relative;}
+  .match.done{border-left:3px solid var(--win);}
+  .match.today{border-left:3px solid var(--live);}
+  .match.livenow{border-left:3px solid var(--live);box-shadow:0 0 0 1px rgba(226,102,75,.4);}
+  .match.tbd{opacity:.72;}
+  .meta{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;color:var(--muted);margin-bottom:7px;}
+  .badge{font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:999px;letter-spacing:.3px;}
+  .badge.done{background:rgba(95,174,126,.18);color:var(--win);}
+  .badge.today{background:rgba(226,102,75,.2);color:var(--live);animation:pulse 1.8s infinite;}
+  .badge.livenow{background:var(--live);color:#fff;animation:pulse 1.1s infinite;}
+  .badge.pk{background:rgba(201,147,63,.2);color:var(--pk);}
+  .badge.tbd{background:rgba(143,171,156,.15);color:var(--muted);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+  .teams{display:flex;flex-direction:column;gap:5px;}
+  .team{display:flex;align-items:center;justify-content:space-between;font-size:14.5px;}
+  .team .name{display:flex;align-items:center;gap:7px;}
+  .team .name .flag{font-size:16px;}
+  .team.winner .name{font-weight:800;color:var(--gold-soft);}
+  .team.loser .name{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(143,171,156,.5);}
+  .score{font-weight:800;font-size:15px;min-width:20px;text-align:right;}
+  .team.winner .score{color:var(--gold-soft);}
+  .team.loser .score{color:var(--muted);}
+  .pk-note{font-size:10px;color:var(--pk);margin-top:2px;}
+  .next{margin-top:8px;padding-top:7px;border-top:1px dashed var(--card-line);
+    font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+  .final-card{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--gold);}
+  .final-card .team{font-size:16px;}
+  .trophy{font-size:28px;text-align:center;margin-bottom:6px;}
+  footer{text-align:center;color:var(--muted);font-size:10.5px;padding:18px 16px 28px;}
+</style>
+</head>
+<body>
+<div class="pitch-lines"></div>
+
+<header>
+  <div class="title-row"><h1>🏆 2026 FIFA世界盃 · 淘汰賽晉級樹</h1></div>
+  <div class="sub">開頁自動更新比數 · 左滑查看各圈 · 32強 → 16強 → 8強 → 4強 → 決賽</div>
+  <div class="status-bar">
+    <span class="dot loading" id="status-dot"></span>
+    <span id="status-text">正在載入最新比數…</span>
+    <button id="refresh-btn">重新整理</button>
+  </div>
+  <nav id="nav">
+    <button data-i="0" class="active">32強</button>
+    <button data-i="1">16強</button>
+    <button data-i="2">8強</button>
+    <button data-i="3">4強</button>
+    <button data-i="4">決賽</button>
+  </nav>
+</header>
+
+<main id="main"></main>
+
+<footer id="footer"></footer>
+
+<script>
+/* ============================================================
+   HOW THIS PAGE WORKS (plain-language note for future-you)
+   ------------------------------------------------------------
+   1. On load it tries to fetch live scores from a free, keyless
+      World Cup API (worldcup26.ir). No password/key needed.
+   2. Each match below has a known-good FALLBACK built in. If the
+      API is down, slow, or missing a result, the page shows the
+      fallback so it NEVER looks broken or blank.
+   3. The status dot up top tells you what happened:
+        green  = live data loaded OK
+        amber  = using saved fallback (API unavailable)
+   4. Tap "重新整理" (Refresh) any time to try the API again.
+   ============================================================ */
+
+// --- The bracket data. `id` matches the API's match id (73-104).
+// --- Fallback fields hold the last known-correct result.
+const MATCHES = [
+  // ROUND OF 32 (ids 73-88)
+  {id:73, round:0, label:"6/28 · 洛杉磯", home:{name:"南非",flag:"🇿🇦"}, away:{name:"加拿大",flag:"🇨🇦"}, fb:{hs:0,as:0,done:true,winner:"away"}, next:"➝ 16強第2場 對 摩洛哥"},
+  {id:74, round:0, label:"6/29 · 波士頓", home:{name:"德國",flag:"🇩🇪"}, away:{name:"巴拉圭",flag:"🇵🇾"}, fb:{hs:1,as:1,done:true,winner:"away",pk:"PK 3:4 · 大冷門，德國出局",note:true}, next:"➝ 16強第1場 對 法國"},
+  {id:75, round:0, label:"6/29 · 蒙特雷", home:{name:"荷蘭",flag:"🇳🇱"}, away:{name:"摩洛哥",flag:"🇲🇦"}, fb:{hs:1,as:1,done:true,winner:"away",pk:"PK 2:3"}, next:"➝ 16強第2場 對 加拿大"},
+  {id:76, round:0, label:"6/29 · 侯斯頓", home:{name:"巴西",flag:"🇧🇷"}, away:{name:"日本",flag:"🇯🇵"}, fb:{hs:2,as:1,done:true,winner:"home"}, next:"➝ 16強第3場 對 挪威"},
+  {id:77, round:0, label:"6/30 · 新澤西", home:{name:"法國",flag:"🇫🇷"}, away:{name:"瑞典",flag:"🇸🇪"}, fb:{hs:3,as:0,done:true,winner:"home",pk:"麥巴比梅開二度(45',74')、巴高拿(53')"}, next:"➝ 16強第1場 對 巴拉圭"},
+  {id:78, round:0, label:"6/30 · 達拉斯", home:{name:"象牙海岸",flag:"🇨🇮"}, away:{name:"挪威",flag:"🇳🇴"}, fb:{hs:1,as:2,done:true,winner:"away",pk:"夏蘭86分鐘絕殺"}, next:"➝ 16強第3場 對 巴西"},
+  {id:79, round:0, label:"6/30 · 墨西哥城", home:{name:"墨西哥",flag:"🇲🇽"}, away:{name:"厄瓜多爾",flag:"🇪🇨"}, fb:{hs:2,as:0,done:true,winner:"home",pk:"基諾尼斯(22')、L.希文尼斯(31')"}, next:"➝ 16強第4場 對 英格蘭/剛果(金)勝方"},
+  {id:80, round:0, label:"7/1 · 阿特蘭大", home:{name:"英格蘭",flag:"🏴"}, away:{name:"剛果(金)",flag:"🇨🇩"}, fb:{today:true}, next:"➝ 16強第4場 對 墨西哥"},
+  {id:81, round:0, label:"7/1 · 聖塔克拉拉", home:{name:"美國",flag:"🇺🇸"}, away:{name:"波黑",flag:"🇧🇦"}, fb:{today:true}, next:"➝ 16強第6場 對 比利時/塞內加爾勝方"},
+  {id:82, round:0, label:"7/1 · 西雅圖", home:{name:"比利時",flag:"🇧🇪"}, away:{name:"塞內加爾",flag:"🇸🇳"}, fb:{today:true}, next:"➝ 16強第6場 對 美國/波黑勝方"},
+  {id:83, round:0, label:"7/2 · 多倫多", home:{name:"葡萄牙",flag:"🇵🇹"}, away:{name:"克羅地亞",flag:"🇭🇷"}, fb:{}, next:"➝ 16強第5場 對 西班牙/奧地利勝方"},
+  {id:84, round:0, label:"7/2 · 英格尔伍德", home:{name:"西班牙",flag:"🇪🇸"}, away:{name:"奧地利",flag:"🇦🇹"}, fb:{}, next:"➝ 16強第5場 對 葡萄牙/克羅地亞勝方"},
+  {id:85, round:0, label:"7/2 · 溫哥華", home:{name:"瑞士",flag:"🇨🇭"}, away:{name:"阿爾及利亞",flag:"🇩🇿"}, fb:{}, next:"➝ 16強第8場 對 哥倫比亞/加納勝方"},
+  {id:86, round:0, label:"7/3 · 邁阿密", home:{name:"阿根廷",flag:"🇦🇷"}, away:{name:"佛德角",flag:"🇨🇻"}, fb:{}, next:"➝ 16強第7場 對 澳洲/埃及勝方"},
+  {id:87, round:0, label:"7/3 · 堪薩斯城", home:{name:"哥倫比亞",flag:"🇨🇴"}, away:{name:"加納",flag:"🇬🇭"}, fb:{}, next:"➝ 16強第8場 對 瑞士/阿爾及利亞勝方"},
+  {id:88, round:0, label:"7/3 · 阿靈頓", home:{name:"澳洲",flag:"🇦🇺"}, away:{name:"埃及",flag:"🇪🇬"}, fb:{}, next:"➝ 16強第7場 對 阿根廷/佛德角勝方"},
+
+  // ROUND OF 16 (ids 89-96)
+  {id:89, round:1, label:"16強第1場 · 7/4 · 費城", home:{name:"巴拉圭",flag:"🇵🇾"}, away:{name:"法國",flag:"🇫🇷"}, fb:{}, next:"➝ 8強第1場 對 加拿大/摩洛哥勝方"},
+  {id:90, round:1, label:"16強第2場 · 7/4 · 侯斯頓", home:{name:"加拿大",flag:"🇨🇦"}, away:{name:"摩洛哥",flag:"🇲🇦"}, fb:{}, next:"➝ 8強第1場 對 巴拉圭/法國勝方"},
+  {id:91, round:1, label:"16強第3場 · 7/5", home:{name:"巴西",flag:"🇧🇷"}, away:{name:"挪威",flag:"🇳🇴"}, fb:{}, next:"➝ 8強第3場"},
+  {id:92, round:1, label:"16強第4場", home:{name:"墨西哥",flag:"🇲🇽"}, away:{name:"英格蘭/剛果(金)勝方"}, fb:{}, next:"➝ 8強第3場 對 巴西/挪威勝方"},
+  {id:93, round:1, label:"16強第5場", home:{name:"葡萄牙/克羅地亞勝方"}, away:{name:"西班牙/奧地利勝方"}, fb:{}, next:"➝ 8強第2場"},
+  {id:94, round:1, label:"16強第6場", home:{name:"美國/波黑勝方"}, away:{name:"比利時/塞內加爾勝方"}, fb:{}, next:"➝ 8強第2場"},
+  {id:95, round:1, label:"16強第7場", home:{name:"阿根廷/佛德角勝方"}, away:{name:"澳洲/埃及勝方"}, fb:{}, next:"➝ 8強第4場"},
+  {id:96, round:1, label:"16強第8場", home:{name:"瑞士/阿爾及利亞勝方"}, away:{name:"哥倫比亞/加納勝方"}, fb:{}, next:"➝ 8強第4場"},
+
+  // QUARTERFINALS (ids 97-100)
+  {id:97, round:2, label:"8強第1場", home:{name:"巴拉圭/法國/加/摩 一方"}, away:{name:"—"}, fb:{}, next:"➝ 4強第1場"},
+  {id:98, round:2, label:"8強第2場", home:{name:"葡/克/西/奧 一方"}, away:{name:"美/波/比/塞 一方"}, fb:{}, next:"➝ 4強第1場"},
+  {id:99, round:2, label:"8強第3場", home:{name:"巴/挪/墨/英/剛 一方"}, away:{name:"—"}, fb:{}, next:"➝ 4強第2場"},
+  {id:100, round:2, label:"8強第4場", home:{name:"阿/佛/澳/埃 一方"}, away:{name:"瑞/阿爾/哥/加 一方"}, fb:{}, next:"➝ 4強第2場"},
+
+  // SEMIFINALS (ids 101-102)
+  {id:101, round:3, label:"4強第1場", home:{name:"8強第1場 勝方"}, away:{name:"8強第2場 勝方"}, fb:{}, next:"➝ 決賽 / 季軍戰"},
+  {id:102, round:3, label:"4強第2場", home:{name:"8強第3場 勝方"}, away:{name:"8強第4場 勝方"}, fb:{}, next:"➝ 決賽 / 季軍戰"},
+
+  // THIRD PLACE + FINAL (ids 103-104)
+  {id:104, round:4, label:"決賽 · 7/19 · MetLife Stadium", home:{name:"4強第1場 勝方"}, away:{name:"4強第2場 勝方"}, fb:{}, isFinal:true},
+  {id:103, round:4, label:"季軍戰 · 7/18", home:{name:"4強第1場 負方"}, away:{name:"4強第2場 負方"}, fb:{}},
+];
+
+const ROUND_META = [
+  {title:"32強 (Round of 32)", note:"16場"},
+  {title:"16強 (Round of 16)", note:"8場 · 7/4–7/7"},
+  {title:"8強 (Quarter-finals)", note:"4場"},
+  {title:"4強 (Semi-finals)", note:"2場"},
+  {title:"決賽 & 季軍戰", note:"7/19"},
+];
+
+const API_URL = "https://worldcup26.ir/get/games";
+
+// Merge live API data over the fallback for one match. Returns a "state" object.
+function resolveMatch(m, liveById){
+  const live = liveById[String(m.id)];
+  // start from fallback
+  let st = {
+    hs: m.fb.hs, as: m.fb.as,
+    done: !!m.fb.done, today: !!m.fb.today,
+    livenow:false, pk:m.fb.pk||"", note:!!m.fb.note,
+    winner:m.fb.winner||null, source:"fallback"
+  };
+  if(live){
+    const hs = parseInt(live.home_score);
+    const as = parseInt(live.away_score);
+    const finished = String(live.finished).toUpperCase()==="TRUE";
+    const elapsed = String(live.time_elapsed||"").toLowerCase();
+    const hasScore = !isNaN(hs) && !isNaN(as);
+    const started = finished || (elapsed && elapsed!=="notstarted");
+    // Only override if the API actually has meaningful score/status data
+    if(hasScore && started){
+      st.hs = hs; st.as = as; st.source="live";
+      if(finished){
+        st.done = true; st.today=false; st.livenow=false;
+        st.winner = hs>as ? "home" : (as>hs ? "away" : (st.winner||null));
+      }else{
+        st.livenow = true; st.today=false; st.done=false;
+      }
+    }
+  }
+  return st;
+}
+
+function teamRow(team, score, cls){
+  const flag = team.flag ? `<span class="flag">${team.flag}</span>` : "";
+  const scoreHtml = (score===null||score===undefined||score==="") ? "" : `<span class="score">${score}</span>`;
+  return `<div class="team ${cls}"><span class="name">${flag}${team.name}</span>${scoreHtml}</div>`;
+}
+
+function render(liveById){
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+  for(let r=0; r<5; r++){
+    const sec = document.createElement("section");
+    sec.className = "round";
+    sec.innerHTML = `<div class="round-head"><h2>${ROUND_META[r].title}</h2><span>${ROUND_META[r].note}</span></div>`;
+    MATCHES.filter(m=>m.round===r).forEach(m=>{
+      const st = resolveMatch(m, liveById);
+      let cls="tbd", badge=`<span class="badge tbd">未開賽</span>`;
+      if(st.livenow){cls="livenow"; badge=`<span class="badge livenow">● 進行中</span>`;}
+      else if(st.done){cls="done"; badge=st.pk&&/PK/.test(st.pk)?`<span class="badge pk">PK大戰</span>`:`<span class="badge done">已完場</span>`;}
+      else if(st.today){cls="today"; badge=`<span class="badge today">今日</span>`;}
+
+      let hs="–", as="–", hCls="", aCls="";
+      if(st.done||st.livenow){
+        hs = (st.hs??"–"); as = (st.as??"–");
+        if(st.done && st.winner==="home"){hCls="winner"; aCls="loser";}
+        else if(st.done && st.winner==="away"){hCls="loser"; aCls="winner";}
+      } else if(st.today){ hs="–"; as="–"; }
+      else { hs=""; as=""; }
+
+      const pkNote = st.pk ? `<div class="pk-note">⚽ ${st.pk}</div>` : "";
+      const nextNote = m.next ? `<div class="next">${m.next}</div>` : "";
+      const trophy = m.isFinal ? `<div class="trophy">🏆</div>` : "";
+      const cardCls = m.isFinal ? `match ${cls} final-card` : `match ${cls}`;
+
+      sec.innerHTML += `
+        <div class="${cardCls}">
+          ${trophy}
+          <div class="meta"><span>${m.label}</span>${badge}</div>
+          <div class="teams">
+            ${teamRow(m.home, (st.done||st.livenow)?hs:(st.today?"–":""), hCls)}
+            ${teamRow(m.away, (st.done||st.livenow)?as:(st.today?"–":""), aCls)}
+          </div>
+          ${pkNote}${nextNote}
+        </div>`;
+    });
+    main.appendChild(sec);
+  }
+  wireNav();
+}
+
+function setStatus(kind, text){
+  const dot=document.getElementById("status-dot");
+  dot.className = "dot "+(kind==="ok"?"ok":kind==="stale"?"stale":"loading");
+  document.getElementById("status-text").textContent = text;
+}
+
+function fmtTime(){
+  const d=new Date();
+  return d.toLocaleTimeString("zh-HK",{hour:"2-digit",minute:"2-digit"});
+}
+
+async function loadLive(){
+  setStatus("loading","正在載入最新比數…");
+  try{
+    const res = await fetch(API_URL, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    // API may wrap games in {games:[...]}, {data:[...]}, or return array directly
+    let arr = Array.isArray(data) ? data
+            : Array.isArray(data.games) ? data.games
+            : Array.isArray(data.data) ? data.data
+            : Array.isArray(data.result) ? data.result : [];
+    // some responses wrap each item as {game:{...}}
+    arr = arr.map(x => x && x.game ? x.game : x).filter(Boolean);
+    const byId = {};
+    arr.forEach(g=>{ if(g && g.id!=null) byId[String(g.id)] = g; });
+    if(Object.keys(byId).length===0) throw new Error("no games in response");
+    render(byId);
+    setStatus("ok", `已更新最新比數 · ${fmtTime()}`);
+    document.getElementById("footer").innerHTML =
+      "比數由免費開放資料來源自動更新。如來源暫時無法連接，會顯示已儲存的最後正確賽果。淘汰賽對賽組合按FIFA官方賽程(第73–104場)。";
+  }catch(err){
+    render({}); // fallback only
+    setStatus("stale", `暫時無法連接即時資料 · 顯示已儲存賽果`);
+    document.getElementById("footer").innerHTML =
+      "⚠️ 即時資料來源暫時無法連接，以下為已儲存的最後正確賽果。可稍後按「重新整理」再試。";
+  }
+}
+
+function wireNav(){
+  const buttons=document.querySelectorAll("#nav button");
+  const main=document.getElementById("main");
+  const rounds=document.querySelectorAll(".round");
+  buttons.forEach(btn=>{
+    btn.onclick=()=>{ rounds[parseInt(btn.dataset.i)].scrollIntoView({behavior:"smooth",inline:"start",block:"nearest"}); };
+  });
+  main.onscroll=()=>{
+    const idx=Math.round(main.scrollLeft/main.clientWidth);
+    buttons.forEach((b,i)=>b.classList.toggle("active",i===idx));
+  };
+}
+
+document.getElementById("refresh-btn").onclick=loadLive;
+loadLive();
+</script>
+</body>
+</html>
