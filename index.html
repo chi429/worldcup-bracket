@@ -106,6 +106,17 @@
   .fr-vs{color:var(--muted);font-size:10px;margin:0 3px;}
   .fr-time{color:var(--gold-soft);flex:0 0 auto;font-weight:700;font-size:10.5px;}
   .fr-cd{color:var(--live);font-weight:800;flex:0 0 auto;font-size:10.5px;min-width:70px;text-align:right;}
+    .lb-head,.lb-row{display:flex;align-items:center;gap:9px;font-size:13px;padding:8px 4px;border-bottom:1px solid rgba(29,77,58,.5);}
+  .lb-head{font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.3px;}
+  .lb-rank{flex:0 0 24px;text-align:center;color:var(--muted);font-weight:800;}
+  .lb-row:nth-child(2) .lb-rank,.lb-row:nth-child(3) .lb-rank,.lb-row:nth-child(4) .lb-rank{color:var(--gold);}
+  .lb-name{flex:1;display:flex;align-items:center;gap:7px;}
+  .lb-team{flex:0 0 auto;color:var(--muted);font-size:11px;min-width:52px;text-align:right;}
+  .lb-goals{flex:0 0 36px;text-align:right;font-weight:800;color:var(--gold-soft);font-size:15px;}
+  .gl-title{font-size:10.5px;color:var(--gold-soft);font-weight:700;margin-bottom:4px;}
+  .gl-row{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text);padding:1.5px 0;}
+  .gl-team{flex:0 0 auto;}
+  .gl-p{color:var(--muted);}
     .final-card{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--gold);}
   .final-card .team{font-size:16px;}
   .trophy{font-size:28px;text-align:center;margin-bottom:6px;}
@@ -129,6 +140,7 @@
     <button data-i="2">8強</button>
     <button data-i="3">4強</button>
     <button data-i="4">決賽</button>
+    <button data-i="5">射手榜</button>
   </nav>
 </header>
 
@@ -341,8 +353,9 @@ function liveCardHTML(m, st, g){
   const hsc=g?parseScorers(g.home_scorers):[];
   const asc=g?parseScorers(g.away_scorers):[];
   const hs=(st.hs??"–"), as=(st.as??"–");
+  const goalList=(arr,flag)=> arr.length? arr.map(e=>`<div class="gl-row"><span class="gl-team">${flag}</span><span class="gl-p">${e}</span></div>`).join("") : "";
   const scLine=(hsc.length||asc.length)
-    ? `<div class="fl-scorers">⚽ ${home.name}：${hsc.join("、")||"—"}　｜　${away.name}：${asc.join("、")||"—"}</div>`
+    ? `<div class="fl-scorers"><div class="gl-title">⚽ 入球</div>${goalList(hsc, home.flag||"")}${goalList(asc, away.flag||"")}</div>`
     : "";
   return `<div class="focus-live">
     <div class="fl-top"><span class="badge livenow">● 進行中 ${minute}</span><span class="fl-label">${m.label}</span></div>
@@ -383,6 +396,36 @@ function renderFocus(liveById){
     html += `<div class="focus-sub">🏆 淘汰賽已全部完成</div>`;
   }
   box.innerHTML=html;
+}
+
+function goalPlayer(entry){
+  let s=String(entry).trim();
+  s=s.replace(/\s+\d+(\+\d+)?\s*['’]?\s*(\(?pen\.?\)?|\(?p\)?|\(?og\)?|o\.?g\.?)?$/i,"").trim();
+  return s;
+}
+function addGoal(tally, entry, tid){
+  const name=goalPlayer(entry);
+  if(!name) return;
+  const key=name+"|"+tid;
+  if(!tally[key]) tally[key]={name, tid, goals:0};
+  tally[key].goals++;
+}
+function scorerBoardHTML(liveById){
+  const tally={};
+  Object.keys(liveById).forEach(id=>{
+    const g=liveById[id];
+    parseScorers(g.home_scorers).forEach(e=>addGoal(tally,e,g.home_team_id));
+    parseScorers(g.away_scorers).forEach(e=>addGoal(tally,e,g.away_team_id));
+  });
+  const arr=Object.values(tally).sort((a,b)=> b.goals-a.goals || a.name.localeCompare(b.name));
+  let rows="";
+  arr.forEach((p,i)=>{
+    rows+=`<div class="lb-row"><span class="lb-rank">${i+1}</span><span class="lb-name">${FLAG[p.tid]||""} ${p.name}</span><span class="lb-team">${ZH[p.tid]||""}</span><span class="lb-goals">${p.goals}</span></div>`;
+  });
+  if(!arr.length) rows=`<div class="jr-empty">暫無入球資料</div>`;
+  return `<div class="round-head"><h2>射手榜 (Top Scorers)</h2><span>${arr.length} 位入球球員</span></div>`
+    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-team">球隊</span><span class="lb-goals">入球</span></div>`
+    + rows;
 }
 
 function render(liveById){
@@ -435,6 +478,10 @@ function render(liveById){
     });
     main.appendChild(sec);
   }
+  const lb=document.createElement("section");
+  lb.className="round";
+  lb.innerHTML=scorerBoardHTML(liveById);
+  main.appendChild(lb);
   renderFocus(liveById);
   wireNav();
   tickCd();
