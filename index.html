@@ -279,13 +279,6 @@ function formatHK(iso){
   const wd={Mon:"一",Tue:"二",Wed:"三",Thu:"四",Fri:"五",Sat:"六",Sun:"日"};
   return `${p.month}/${p.day}(${wd[p.weekday]||p.weekday}) ${p.hour}:${p.minute}`;
 }
-function ymdET(d){  // calendar date (YYYY-MM-DD) in US-Eastern, matching the venue-date labels
-  const p={};
-  new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"})
-    .formatToParts(d).forEach(x=>p[x.type]=x.value);
-  return `${p.year}-${p.month}-${p.day}`;
-}
-function isTodayKO(ko){ return ko ? ymdET(new Date(ko))===ymdET(new Date()) : false; }
 function cdText(iso, done, live){
   if(done||live) return {t:"",soon:false};
   let diff = new Date(iso).getTime() - Date.now();
@@ -498,12 +491,11 @@ function render(liveById){
     sec.innerHTML = `<div class="round-head"><h2>${ROUND_META[r].title}</h2><span>${ROUND_META[r].note}</span></div>`;
     MATCHES.filter(m=>m.round===r)
       .slice()
-      .sort((a,b)=>{  // today's matches first, then latest kickoff first; TBD last
-        const at=isTodayKO(a.ko), bt=isTodayKO(b.ko);
-        if(at!==bt) return at?-1:1;
-        const ta=a.ko?new Date(a.ko).getTime():-Infinity;
-        const tb=b.ko?new Date(b.ko).getTime():-Infinity;
-        return tb-ta;
+      .sort((a,b)=>{  // closest kickoff to the current time first; TBD matches last
+        const now=Date.now();
+        const da=a.ko?Math.abs(new Date(a.ko).getTime()-now):Infinity;
+        const db=b.ko?Math.abs(new Date(b.ko).getTime()-now):Infinity;
+        return da-db;
       })
       .forEach(m=>{
       const st = resolveMatch(m, liveById);
