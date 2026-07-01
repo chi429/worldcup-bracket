@@ -19,6 +19,16 @@
   header .sub{color:var(--muted);font-size:13px;margin-top:6px}
   header .asof{display:inline-block;margin-top:10px;font-size:12px;color:var(--gold);
     border:1px solid var(--line);padding:4px 10px;border-radius:20px;background:var(--panel)}
+  .statusbar{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:12px}
+  .sdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .sdot.ok{background:var(--green)}
+  .sdot.stale{background:#e0912f}
+  .sdot.loading{background:var(--muted);animation:sblink 1.2s infinite}
+  @keyframes sblink{0%,100%{opacity:1}50%{opacity:.35}}
+  #stext{color:var(--muted)}
+  #refreshBtn{background:var(--panel);border:1px solid var(--line);color:var(--gold);
+    font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer}
+  #refreshBtn:active{transform:scale(.96)}
   nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:16px 12px 4px;position:sticky;top:0;
     background:rgba(8,21,14,.92);backdrop-filter:blur(6px);z-index:20}
   nav button{background:var(--panel);color:var(--muted);border:1px solid var(--line);
@@ -135,7 +145,12 @@
 <header>
   <h1><span class="tro">🏆</span> 2026 FIFA World Cup <span class="tro">🏆</span></h1>
   <div class="sub">Canada · Mexico · United States — 48 teams · 16 venues · Final July 19 at MetLife Stadium</div>
-  <div class="asof">Data current as of July 2, 2026 · Round of 32 in progress</div>
+  <div class="asof">2026 · Round of 32 in progress</div>
+  <div class="statusbar">
+    <span class="sdot loading" id="sdot"></span>
+    <span id="stext">連接即時資料中…</span>
+    <button id="refreshBtn">重新整理 Refresh</button>
+  </div>
 </header>
 
 <nav>
@@ -256,6 +271,13 @@ const ORDER = {
 };
 const RTITLES={R32:"Round of 32",R16:"Round of 16",QF:"Quarter-finals",SF:"Semi-finals",F:"Final"};
 
+// Team code -> numeric id used by the live API (worldcup26.ir), same source as the live view.
+const ID={MEX:1,RSA:2,KOR:3,CZE:4,CAN:5,BIH:6,QAT:7,SUI:8,BRA:9,MAR:10,HAI:11,SCO:12,
+  USA:13,PAR:14,AUS:15,TUR:16,GER:17,CUW:18,CIV:19,ECU:20,NED:21,JPN:22,SWE:23,TUN:24,
+  BEL:25,EGY:26,IRN:27,NZL:28,ESP:29,CPV:30,KSA:31,URU:32,FRA:33,SEN:34,IRQ:35,NOR:36,
+  ARG:37,ALG:38,AUT:39,JOR:40,POR:41,COD:42,UZB:43,COL:44,ENG:45,CRO:46,GHA:47,PAN:48};
+const API_URL="https://worldcup26.ir/get/games";
+
 /* resolve a match slot to a team key (or null if unknown) */
 function slot(m,side){
   const t = side==="a"?m.a:m.b;
@@ -362,10 +384,11 @@ function renderPicker(){
   const el=document.getElementById("pickerEl"); el.innerHTML="";
   Object.keys(FIRST).sort((x,y)=>nm(x).localeCompare(nm(y))).forEach(tk=>{
     const b=document.createElement("button");
+    b.dataset.tk=tk;
     b.innerHTML=`${fg(tk)} ${nm(tk)}`;
     if(isEliminated(tk)) b.classList.add("eliminated");
     b.onclick=()=>{document.querySelectorAll("#pickerEl button").forEach(x=>x.classList.remove("sel"));
-      b.classList.add("sel"); renderPath(tk);};
+      b.classList.add("sel"); window.__selTeam=tk; renderPath(tk);};
     el.appendChild(b);
   });
 }
@@ -441,12 +464,75 @@ document.querySelectorAll("nav button").forEach(b=>{
   };
 });
 
+/* ---------------- LIVE UPDATE (same free API as the live view) ---------------- */
+function codeOf(m,side){const t=side==="a"?m.a:m.b;if(t)return t;
+  const f=side==="a"?m.fa:m.fb;if(f&&M[f]&&M[f].w)return M[f].w;return null;}
+// Merge API results over the static fallback. Processed round-by-round so that
+// each round's winners propagate into the next round's feeder slots.
+function mergeLive(byId){
+  ["R32","R16","QF","SF","F"].forEach(rk=>{
+    ORDER[rk].forEach(idk=>{
+      const m=M[idk]; const g=byId[idk.slice(1)]; if(!g) return;
+      const hs=parseInt(g.home_score), as=parseInt(g.away_score);
+      const finished=String(g.finished).toUpperCase()==="TRUE";
+      const el=String(g.time_elapsed||"").toLowerCase();
+      const started=finished||(el&&el!=="notstarted");
+      if(isNaN(hs)||isNaN(as)||!started) return;   // nothing meaningful yet -> keep fallback
+      const ca=codeOf(m,"a"), cb=codeOf(m,"b");
+      const hid=String(g.home_team_id), aid=String(g.away_team_id);
+      let saV,sbV;
+      if(ca&&String(ID[ca])===hid){saV=hs;sbV=as;}
+      else if(ca&&String(ID[ca])===aid){saV=as;sbV=hs;}
+      else if(cb&&String(ID[cb])===hid){saV=as;sbV=hs;}
+      else if(cb&&String(ID[cb])===aid){saV=hs;sbV=as;}
+      else {saV=hs;sbV=as;}
+      m.sa=saV; m.sb=sbV;
+      if(finished){ m.st="done";
+        if(saV>sbV)m.w=ca; else if(sbV>saV)m.w=cb; /* draw -> penalties: keep any static winner */ }
+      else { m.st="live"; m.w=null; }
+    });
+  });
+}
+function renderAll(){
+  renderBracket(); renderSchedule();
+  const prev=window.__selTeam; renderPicker(); selectPath(prev);
+}
+function selectPath(pref){
+  const btns=[...document.querySelectorAll("#pickerEl button")];
+  let t = pref && btns.find(x=>x.dataset.tk===pref);
+  if(!t) t = btns.find(x=>x.dataset.tk==="USA") || btns[0];
+  if(t) t.click();
+}
+function setStatus(kind,text){
+  const d=document.getElementById("sdot");
+  d.className="sdot "+(kind==="ok"?"ok":kind==="stale"?"stale":"loading");
+  document.getElementById("stext").textContent=text;
+}
+function nowHK(){return new Date().toLocaleTimeString("zh-HK",{hour:"2-digit",minute:"2-digit"});}
+async function loadLive(){
+  setStatus("loading","連接即時資料中…");
+  try{
+    const res=await fetch(API_URL,{cache:"no-store"});
+    if(!res.ok) throw 0;
+    const data=await res.json();
+    let arr=Array.isArray(data)?data:(data.games||data.data||data.result||[]);
+    arr=arr.map(x=>x&&x.game?x.game:x).filter(Boolean);
+    const byId={}; arr.forEach(g=>{if(g&&g.id!=null)byId[String(g.id)]=g;});
+    if(!Object.keys(byId).length) throw 0;
+    mergeLive(byId); renderAll();
+    setStatus("ok","已更新即時比數 · "+nowHK());
+  }catch(e){
+    renderAll(); // static fallback — never blank
+    setStatus("stale","暫時無法連接即時資料 · 顯示已儲存賽果");
+  }
+}
+
 /* init */
-renderBracket(); renderGroups(); renderPicker(); renderSchedule();
-// default path selection: a still-alive host
-(function(){const btns=[...document.querySelectorAll("#pickerEl button")];
-  const usa=btns.find(x=>x.textContent.includes("United States"));
-  (usa||btns[0]).click();})();
+renderGroups();          // group stage is final — rendered once from stored data
+renderAll();             // instant static paint (bracket / route / schedule)
+loadLive();              // then pull live knockout scores
+setInterval(loadLive, 60000);
+document.getElementById("refreshBtn").onclick=loadLive;
 </script>
 </body>
 </html>
