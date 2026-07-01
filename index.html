@@ -384,8 +384,8 @@ function render(liveById){
       const g = liveById[String(m.id)];
       const homeId = g ? g.home_team_id : null;
       const awayId = g ? g.away_team_id : null;
-      const jrNote = (hasFinished(homeId)?`<div class="journey" id="jr-${m.id}-h" hidden>${journeyHTML(homeId)}</div>`:"")
-                   + (hasFinished(awayId)?`<div class="journey" id="jr-${m.id}-a" hidden>${journeyHTML(awayId)}</div>`:"");
+      const homePanel = hasFinished(homeId)?`<div class="journey" id="jr-${m.id}-h" hidden>${journeyHTML(homeId)}</div>`:"";
+      const awayPanel = hasFinished(awayId)?`<div class="journey" id="jr-${m.id}-a" hidden>${journeyHTML(awayId)}</div>`:"";
       let cls="tbd", badge=`<span class="badge tbd">未開賽</span>`;
       if(st.livenow){cls="livenow"; badge=`<span class="badge livenow">● 進行中</span>`;}
       else if(st.done){cls="done"; badge=st.pk&&/PK/.test(st.pk)?`<span class="badge pk">PK大戰</span>`:`<span class="badge done">已完場</span>`;}
@@ -411,9 +411,11 @@ function render(liveById){
           <div class="meta"><span>${m.label}</span>${badge}</div>
           <div class="teams">
             ${teamRow(m.home, (st.done||st.livenow)?hs:(st.today?"–":""), hCls, homeId, "jr-"+m.id+"-h")}
+            ${homePanel}
             ${teamRow(m.away, (st.done||st.livenow)?as:(st.today?"–":""), aCls, awayId, "jr-"+m.id+"-a")}
+            ${awayPanel}
           </div>
-          ${jrNote}${koNote}${pkNote}${nextNote}
+          ${koNote}${pkNote}${nextNote}
         </div>`;
     });
     main.appendChild(sec);
