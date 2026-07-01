@@ -77,6 +77,16 @@
   .kickoff .ko-t{color:var(--gold-soft);font-weight:700;}
   .kickoff .cd{color:var(--live);font-weight:800;}
   .kickoff .cd.soon{color:var(--gold);}
+    .team.tappable{cursor:pointer;}
+  .team.tappable .name::after{content:"▸";color:var(--muted);font-size:10px;margin-left:2px;display:inline-block;transition:transform .15s;}
+  .team.tappable.open .name::after{transform:rotate(90deg);color:var(--gold-soft);}
+  .journey{margin-top:7px;padding:7px 9px;background:rgba(0,0,0,.2);border:1px solid var(--card-line);border-radius:8px;}
+  .jr-row{display:flex;align-items:center;gap:8px;font-size:10.5px;padding:2.5px 0;color:var(--muted);}
+  .jr-st{color:var(--gold-soft);flex:0 0 auto;min-width:52px;}
+  .jr-vs{flex:1;}
+  .jr-sc{font-weight:800;flex:0 0 auto;}
+  .jr-sc.w{color:var(--win);} .jr-sc.l{color:var(--live);} .jr-sc.d{color:var(--pk);}
+  .jr-empty{font-size:10.5px;color:var(--muted);}
     .final-card{background:linear-gradient(135deg,var(--card-hi),var(--card));border:1px solid var(--gold);}
   .final-card .team{font-size:16px;}
   .trophy{font-size:28px;text-align:center;margin-bottom:6px;}
@@ -88,7 +98,7 @@
 
 <header>
   <div class="title-row"><h1>🏆 2026 FIFA世界盃 · 淘汰賽晉級樹</h1></div>
-  <div class="sub">開頁自動更新比數 · 左滑查看各圈 · 32強 → 16強 → 8強 → 4強 → 決賽</div>
+  <div class="sub">開頁自動更新比數 · 左滑查看各圈 · 點隊名看歷程 · 32強 → 16強 → 8強 → 4強 → 決賽</div>
   <div class="status-bar">
     <span class="dot loading" id="status-dot"></span>
     <span id="status-text">正在載入最新比數…</span>
@@ -209,10 +219,13 @@ function resolveMatch(m, liveById){
   return st;
 }
 
-function teamRow(team, score, cls){
+function teamRow(team, score, cls, tid, target){
   const flag = team.flag ? `<span class="flag">${team.flag}</span>` : "";
   const scoreHtml = (score===null||score===undefined||score==="") ? "" : `<span class="score">${score}</span>`;
-  return `<div class="team ${cls}"><span class="name">${flag}${team.name}</span>${scoreHtml}</div>`;
+  const canTap = !!(tid && TEAM_GAMES[tid] && TEAM_GAMES[tid].some(g=>g.finished==="TRUE"));
+  const cls2 = "team " + cls + (canTap ? " tappable" : "");
+  const dt = canTap ? ` data-target="${target}"` : "";
+  return `<div class="${cls2}"${dt}><span class="name">${flag}${team.name}</span>${scoreHtml}</div>`;
 }
 
 function formatHK(iso){
@@ -245,6 +258,36 @@ function tickCd(){
   });
 }
 
+let TEAM_GAMES = {};
+const ZH = {"1":"墨西哥","2":"南非","3":"南韓","4":"捷克","5":"加拿大","6":"波黑","7":"卡塔爾","8":"瑞士","9":"巴西","10":"摩洛哥","11":"海地","12":"蘇格蘭","13":"美國","14":"巴拉圭","15":"澳洲","16":"土耳其","17":"德國","18":"庫拉索","19":"象牙海岸","20":"厄瓜多爾","21":"荷蘭","22":"日本","23":"瑞典","24":"突尼西亞","25":"比利時","26":"埃及","27":"伊朗","28":"紐西蘭","29":"西班牙","30":"佛德角","31":"沙特阿拉伯","32":"烏拉圭","33":"法國","34":"塞內加爾","35":"伊拉克","36":"挪威","37":"阿根廷","38":"阿爾及利亞","39":"奧地利","40":"約旦","41":"葡萄牙","42":"剛果(金)","43":"烏茲別克","44":"哥倫比亞","45":"英格蘭","46":"克羅地亞","47":"加納","48":"巴拿馬"};
+function stageLabel(g){
+  if(g.type==="group") return "分組"+(g.matchday?("第"+g.matchday+"輪"):"");
+  const id=+g.id;
+  if(id<=88) return "32強"; if(id<=96) return "16強"; if(id<=100) return "8強";
+  if(id<=102) return "4強"; if(id===103) return "季軍戰"; return "決賽";
+}
+function zhName(tid, en){ return ZH[tid] || en || "—"; }
+function hasFinished(tid){ return !!(tid && TEAM_GAMES[tid] && TEAM_GAMES[tid].some(g=>g.finished==="TRUE")); }
+function journeyHTML(tid){
+  if(!tid) return "";
+  const games=(TEAM_GAMES[tid]||[]).filter(g=>g.finished==="TRUE").sort((a,b)=>(+a.id)-(+b.id));
+  if(!games.length) return `<div class="jr-empty">暫無完賽記錄</div>`;
+  let rows="";
+  games.forEach(g=>{
+    const isH = g.home_team_id===tid;
+    const own = isH? g.home_score : g.away_score;
+    const opp = isH? g.away_score : g.home_score;
+    const oppId = isH? g.away_team_id : g.home_team_id;
+    const oppEn = isH? g.away_team_name_en : g.home_team_name_en;
+    const o=parseInt(own), p=parseInt(opp);
+    let tag="和", c="d";
+    if(o>p){tag="勝";c="w";} else if(o<p){tag="負";c="l";}
+    const sc = (isNaN(o)||isNaN(p)) ? "—" : `${own}-${opp}`;
+    rows += `<div class="jr-row"><span class="jr-st">${stageLabel(g)}</span><span class="jr-vs">對 ${zhName(oppId,oppEn)}</span><span class="jr-sc ${c}">${sc} ${tag}</span></div>`;
+  });
+  return rows;
+}
+
 function render(liveById){
   const main = document.getElementById("main");
   main.innerHTML = "";
@@ -254,6 +297,11 @@ function render(liveById){
     sec.innerHTML = `<div class="round-head"><h2>${ROUND_META[r].title}</h2><span>${ROUND_META[r].note}</span></div>`;
     MATCHES.filter(m=>m.round===r).forEach(m=>{
       const st = resolveMatch(m, liveById);
+      const g = liveById[String(m.id)];
+      const homeId = g ? g.home_team_id : null;
+      const awayId = g ? g.away_team_id : null;
+      const jrNote = (hasFinished(homeId)?`<div class="journey" id="jr-${m.id}-h" hidden>${journeyHTML(homeId)}</div>`:"")
+                   + (hasFinished(awayId)?`<div class="journey" id="jr-${m.id}-a" hidden>${journeyHTML(awayId)}</div>`:"");
       let cls="tbd", badge=`<span class="badge tbd">未開賽</span>`;
       if(st.livenow){cls="livenow"; badge=`<span class="badge livenow">● 進行中</span>`;}
       else if(st.done){cls="done"; badge=st.pk&&/PK/.test(st.pk)?`<span class="badge pk">PK大戰</span>`:`<span class="badge done">已完場</span>`;}
@@ -278,10 +326,10 @@ function render(liveById){
           ${trophy}
           <div class="meta"><span>${m.label}</span>${badge}</div>
           <div class="teams">
-            ${teamRow(m.home, (st.done||st.livenow)?hs:(st.today?"–":""), hCls)}
-            ${teamRow(m.away, (st.done||st.livenow)?as:(st.today?"–":""), aCls)}
+            ${teamRow(m.home, (st.done||st.livenow)?hs:(st.today?"–":""), hCls, homeId, "jr-"+m.id+"-h")}
+            ${teamRow(m.away, (st.done||st.livenow)?as:(st.today?"–":""), aCls, awayId, "jr-"+m.id+"-a")}
           </div>
-          ${koNote}${pkNote}${nextNote}
+          ${jrNote}${koNote}${pkNote}${nextNote}
         </div>`;
     });
     main.appendChild(sec);
@@ -316,6 +364,12 @@ async function loadLive(){
     arr = arr.map(x => x && x.game ? x.game : x).filter(Boolean);
     const byId = {};
     arr.forEach(g=>{ if(g && g.id!=null) byId[String(g.id)] = g; });
+    const tg={};
+    arr.forEach(g=>{
+      if(g.home_team_id){(tg[g.home_team_id]=tg[g.home_team_id]||[]).push(g);}
+      if(g.away_team_id){(tg[g.away_team_id]=tg[g.away_team_id]||[]).push(g);}
+    });
+    TEAM_GAMES = tg;
     if(Object.keys(byId).length===0) throw new Error("no games in response");
     render(byId);
     setStatus("ok", `已更新最新比數 · ${fmtTime()}`);
@@ -345,6 +399,12 @@ function wireNav(){
 document.getElementById("refresh-btn").onclick=loadLive;
 loadLive();
 setInterval(tickCd, 30000);
+document.addEventListener("click", function(e){
+  const t = e.target.closest(".team.tappable");
+  if(!t) return;
+  const p = document.getElementById(t.dataset.target);
+  if(p){ p.hidden = !p.hidden; t.classList.toggle("open", !p.hidden); }
+});
 </script>
 </body>
 </html>
