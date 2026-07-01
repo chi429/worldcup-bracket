@@ -26,9 +26,10 @@
   .sdot.loading{background:var(--muted);animation:sblink 1.2s infinite}
   @keyframes sblink{0%,100%{opacity:1}50%{opacity:.35}}
   #stext{color:var(--muted)}
-  #refreshBtn{background:var(--panel);border:1px solid var(--line);color:var(--gold);
+  #refreshBtn,#langBtn{background:var(--panel);border:1px solid var(--line);color:var(--gold);
     font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer}
-  #refreshBtn:active{transform:scale(.96)}
+  #langBtn{color:var(--text)}
+  #refreshBtn:active,#langBtn:active{transform:scale(.96)}
   nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:16px 12px 4px;position:sticky;top:0;
     background:rgba(8,21,14,.92);backdrop-filter:blur(6px);z-index:20}
   nav button{background:var(--panel);color:var(--muted);border:1px solid var(--line);
@@ -80,12 +81,17 @@
   td.team{text-align:left;white-space:nowrap}
   tbody tr{border-top:1px solid var(--line)}
   .pos{color:var(--muted);width:18px}
-  .q1 td.team::after{content:"1st";font-size:9px;color:#20160a;background:var(--gold);
-    padding:1px 5px;border-radius:8px;margin-left:6px;vertical-align:middle;font-weight:700}
-  .q2 td.team::after{content:"2nd";font-size:9px;color:#eafff2;background:var(--green);
-    padding:1px 5px;border-radius:8px;margin-left:6px;vertical-align:middle;font-weight:700}
-  .q3 td.team::after{content:"3rd ✓";font-size:9px;color:#eafff2;background:#2f6f8f;
-    padding:1px 5px;border-radius:8px;margin-left:6px;vertical-align:middle;font-weight:700}
+  .q1 td.team::after,.q2 td.team::after,.q3 td.team::after{
+    font-size:9px;padding:1px 5px;border-radius:8px;margin-left:6px;vertical-align:middle;font-weight:700}
+  .q1 td.team::after{color:#20160a;background:var(--gold)}
+  .q2 td.team::after{color:#eafff2;background:var(--green)}
+  .q3 td.team::after{color:#eafff2;background:#2f6f8f}
+  body[data-lang="en"] .q1 td.team::after{content:"1st"}
+  body[data-lang="en"] .q2 td.team::after{content:"2nd"}
+  body[data-lang="en"] .q3 td.team::after{content:"3rd ✓"}
+  body[data-lang="zh"] .q1 td.team::after{content:"首名"}
+  body[data-lang="zh"] .q2 td.team::after{content:"次名"}
+  body[data-lang="zh"] .q3 td.team::after{content:"第三 ✓"}
   tr.qual td.pts{color:var(--gold);font-weight:700}
   tr.out{opacity:.5}
   .grp .fnote{font-size:10px;color:var(--muted);padding:6px 12px;border-top:1px solid var(--line)}
@@ -143,69 +149,71 @@
 </head>
 <body>
 <header>
-  <h1><span class="tro">🏆</span> 2026 FIFA World Cup <span class="tro">🏆</span></h1>
-  <div class="sub">Canada · Mexico · United States — 48 teams · 16 venues · Final July 19 at MetLife Stadium</div>
-  <div class="asof">2026 · Round of 32 in progress</div>
+  <h1 id="h1El"></h1>
+  <div class="sub" id="subEl"></div>
+  <div class="asof" id="asofEl"></div>
   <div class="statusbar">
     <span class="sdot loading" id="sdot"></span>
     <span id="stext">連接即時資料中…</span>
     <button id="refreshBtn">重新整理 Refresh</button>
+    <button id="langBtn"></button>
   </div>
 </header>
 
 <nav>
-  <button data-v="bracket" class="active">🏟️ Bracket</button>
-  <button data-v="groups">📊 Group Stage</button>
-  <button data-v="path">🧭 Route to Final</button>
-  <button data-v="schedule">📅 Schedule</button>
+  <button data-v="bracket" class="active"></button>
+  <button data-v="groups"></button>
+  <button data-v="path"></button>
+  <button data-v="schedule"></button>
 </nav>
 
 <main>
   <section id="bracket" class="view active">
-    <p class="hint">Full knockout tree — Round of 32 through the Final. Winners are highlighted in gold; June 28–July 1 results are confirmed, July 2–3 matches are still to be played. Scroll horizontally →</p>
+    <p class="hint" id="hint-bracket"></p>
     <div class="bracket-wrap"><div class="bracket" id="bracketEl"></div></div>
-    <div class="champ"><div class="lbl">🏆 Champion</div><div class="who" id="champEl">To be decided — July 19, MetLife Stadium</div></div>
+    <div class="champ"><div class="lbl" id="champLbl"></div><div class="who" id="champEl"></div></div>
   </section>
 
   <section id="groups" class="view">
-    <p class="hint">Final group standings for all 12 groups. <b style="color:var(--gold)">1st</b> &amp; <b style="color:var(--green)">2nd</b> auto-qualify; the 8 best <b style="color:#4ba3c7">3rd</b>-placed teams also advance.</p>
+    <p class="hint" id="hint-groups"></p>
     <div class="groups" id="groupsEl"></div>
   </section>
 
   <section id="path" class="view">
-    <p class="hint">Pick a team to trace its route to the final at MetLife Stadium. Eliminated teams are struck through.</p>
+    <p class="hint" id="hint-path"></p>
     <div class="team-picker" id="pickerEl"></div>
     <div class="path" id="pathEl"></div>
   </section>
 
   <section id="schedule" class="view">
-    <p class="hint">Every knockout fixture in chronological order, with results where played.</p>
+    <p class="hint" id="hint-schedule"></p>
     <div class="sched" id="schedEl"></div>
   </section>
 </main>
 
-<footer>
-  Built for the worldcup-bracket project · Sources: Wikipedia, Yahoo Sports, FOX Sports, NBC Sports.<br>
-  Group results &amp; Round-of-32 matchups confirmed; scores for July 2–3 matches pending kickoff.
-</footer>
+<footer id="footEl"></footer>
 
 <script>
 /* ---------------- DATA ---------------- */
+let LANG = "zh";                 // "zh" (香港繁體) | "en"
+const L = (zh,en)=> LANG==="zh" ? zh : en;
+// [English name, flag, 香港中文名]
 const T = {
-  MEX:["Mexico","🇲🇽"], RSA:["South Africa","🇿🇦"], KOR:["South Korea","🇰🇷"], CZE:["Czechia","🇨🇿"],
-  SUI:["Switzerland","🇨🇭"], CAN:["Canada","🇨🇦"], BIH:["Bosnia & Herz.","🇧🇦"], QAT:["Qatar","🇶🇦"],
-  BRA:["Brazil","🇧🇷"], MAR:["Morocco","🇲🇦"], SCO:["Scotland","🏴󠁧󠁢󠁳󠁣󠁴󠁿"], HAI:["Haiti","🇭🇹"],
-  USA:["United States","🇺🇸"], AUS:["Australia","🇦🇺"], PAR:["Paraguay","🇵🇾"], TUR:["Türkiye","🇹🇷"],
-  GER:["Germany","🇩🇪"], CIV:["Ivory Coast","🇨🇮"], ECU:["Ecuador","🇪🇨"], CUW:["Curaçao","🇨🇼"],
-  NED:["Netherlands","🇳🇱"], JPN:["Japan","🇯🇵"], SWE:["Sweden","🇸🇪"], TUN:["Tunisia","🇹🇳"],
-  BEL:["Belgium","🇧🇪"], EGY:["Egypt","🇪🇬"], IRN:["Iran","🇮🇷"], NZL:["New Zealand","🇳🇿"],
-  ESP:["Spain","🇪🇸"], CPV:["Cape Verde","🇨🇻"], URU:["Uruguay","🇺🇾"], KSA:["Saudi Arabia","🇸🇦"],
-  FRA:["France","🇫🇷"], NOR:["Norway","🇳🇴"], SEN:["Senegal","🇸🇳"], IRQ:["Iraq","🇮🇶"],
-  ARG:["Argentina","🇦🇷"], AUT:["Austria","🇦🇹"], ALG:["Algeria","🇩🇿"], JOR:["Jordan","🇯🇴"],
-  COL:["Colombia","🇨🇴"], POR:["Portugal","🇵🇹"], COD:["Congo DR","🇨🇩"], UZB:["Uzbekistan","🇺🇿"],
-  ENG:["England","🏴󠁧󠁢󠁥󠁮󠁧󠁿"], CRO:["Croatia","🇭🇷"], GHA:["Ghana","🇬🇭"], PAN:["Panama","🇵🇦"]
+  MEX:["Mexico","🇲🇽","墨西哥"], RSA:["South Africa","🇿🇦","南非"], KOR:["South Korea","🇰🇷","南韓"], CZE:["Czechia","🇨🇿","捷克"],
+  SUI:["Switzerland","🇨🇭","瑞士"], CAN:["Canada","🇨🇦","加拿大"], BIH:["Bosnia & Herz.","🇧🇦","波黑"], QAT:["Qatar","🇶🇦","卡塔爾"],
+  BRA:["Brazil","🇧🇷","巴西"], MAR:["Morocco","🇲🇦","摩洛哥"], SCO:["Scotland","🏴󠁧󠁢󠁳󠁣󠁴󠁿","蘇格蘭"], HAI:["Haiti","🇭🇹","海地"],
+  USA:["United States","🇺🇸","美國"], AUS:["Australia","🇦🇺","澳洲"], PAR:["Paraguay","🇵🇾","巴拉圭"], TUR:["Türkiye","🇹🇷","土耳其"],
+  GER:["Germany","🇩🇪","德國"], CIV:["Ivory Coast","🇨🇮","象牙海岸"], ECU:["Ecuador","🇪🇨","厄瓜多爾"], CUW:["Curaçao","🇨🇼","庫拉索"],
+  NED:["Netherlands","🇳🇱","荷蘭"], JPN:["Japan","🇯🇵","日本"], SWE:["Sweden","🇸🇪","瑞典"], TUN:["Tunisia","🇹🇳","突尼西亞"],
+  BEL:["Belgium","🇧🇪","比利時"], EGY:["Egypt","🇪🇬","埃及"], IRN:["Iran","🇮🇷","伊朗"], NZL:["New Zealand","🇳🇿","紐西蘭"],
+  ESP:["Spain","🇪🇸","西班牙"], CPV:["Cape Verde","🇨🇻","佛德角"], URU:["Uruguay","🇺🇾","烏拉圭"], KSA:["Saudi Arabia","🇸🇦","沙特阿拉伯"],
+  FRA:["France","🇫🇷","法國"], NOR:["Norway","🇳🇴","挪威"], SEN:["Senegal","🇸🇳","塞內加爾"], IRQ:["Iraq","🇮🇶","伊拉克"],
+  ARG:["Argentina","🇦🇷","阿根廷"], AUT:["Austria","🇦🇹","奧地利"], ALG:["Algeria","🇩🇿","阿爾及利亞"], JOR:["Jordan","🇯🇴","約旦"],
+  COL:["Colombia","🇨🇴","哥倫比亞"], POR:["Portugal","🇵🇹","葡萄牙"], COD:["Congo DR","🇨🇩","剛果(金)"], UZB:["Uzbekistan","🇺🇿","烏茲別克"],
+  ENG:["England","🏴󠁧󠁢󠁥󠁮󠁧󠁿","英格蘭"], CRO:["Croatia","🇭🇷","克羅地亞"], GHA:["Ghana","🇬🇭","加納"], PAN:["Panama","🇵🇦","巴拿馬"]
 };
-const nm=k=>T[k]?T[k][0]:k, fg=k=>T[k]?T[k][1]:"";
+const nm=k=> T[k] ? (LANG==="zh" ? (T[k][2]||T[k][0]) : T[k][0]) : k;
+const fg=k=> T[k] ? T[k][1] : "";
 
 // Group standings: [team, W,D,L,GF,GA,Pts, qualify(1/2/3/0)]
 const GROUPS = {
@@ -269,7 +277,8 @@ const ORDER = {
   SF:["M101","M102"],
   F:["M104"]
 };
-const RTITLES={R32:"Round of 32",R16:"Round of 16",QF:"Quarter-finals",SF:"Semi-finals",F:"Final"};
+const RTITLES={R32:["Round of 32","32強"],R16:["Round of 16","16強"],QF:["Quarter-finals","8強"],SF:["Semi-finals","4強"],F:["Final","決賽"]};
+const RT=rk=> LANG==="zh" ? RTITLES[rk][1] : RTITLES[rk][0];
 
 // Team code -> numeric id used by the live API (worldcup26.ir), same source as the live view.
 const ID={MEX:1,RSA:2,KOR:3,CZE:4,CAN:5,BIH:6,QAT:7,SUI:8,BRA:9,MAR:10,HAI:11,SCO:12,
@@ -290,7 +299,7 @@ function slotLabel(m,side){
   const f = side==="a"?m.fa:m.fb;
   const t = slot(m,side);
   if(t) return {team:t};
-  return {tbd:true,label:f?("Winner "+f):"TBD"};
+  return {tbd:true,label: f ? L(f+" 勝方","Winner "+f) : L("待定","TBD")};
 }
 
 /* ---------------- RENDER: BRACKET ---------------- */
@@ -299,23 +308,24 @@ function renderBracket(){
   for(const rk of ["R32","R16","QF","SF","F"]){
     const col=document.createElement("div");
     col.className="round"+(rk==="F"?" final":"");
-    col.innerHTML=`<div class="round-title">${RTITLES[rk]}</div>`;
+    col.innerHTML=`<div class="round-title">${RT(rk)}</div>`;
     for(const id of ORDER[rk]){
       const m=M[id]; col.appendChild(matchCard(m,id));
     }
     el.appendChild(col);
   }
   const fin=M.M104;
-  if(fin.w){document.getElementById("champEl").innerHTML=
-    `<span style="font-size:26px">${fg(fin.w)}</span> <b style="color:var(--gold)">${nm(fin.w)}</b>`;}
+  document.getElementById("champEl").innerHTML = fin.w
+    ? `<span style="font-size:26px">${fg(fin.w)}</span> <b style="color:var(--gold)">${nm(fin.w)}</b>`
+    : L("尚未產生 — 7月19日 · MetLife 球場","To be decided — July 19, MetLife Stadium");
 }
 function matchCard(m,id){
   const d=document.createElement("div"); d.className="match";
   d.appendChild(sideRow(m,"a")); d.appendChild(sideRow(m,"b"));
   if(m.pens) {const p=document.createElement("div");p.className="pens";
-    p.textContent=`Penalties ${m.pens[0]}–${m.pens[1]}`;d.appendChild(p);}
+    p.textContent=L(`十二碼 ${m.pens[0]}–${m.pens[1]}`,`Penalties ${m.pens[0]}–${m.pens[1]}`);d.appendChild(p);}
   const meta=document.createElement("div"); meta.className="meta";
-  const status = m.st==="live"?`<span class="tag-live">● LIVE / TODAY</span>`:m.date;
+  const status = m.st==="live"?`<span class="tag-live">${L("● 直播/今日","● LIVE / TODAY")}</span>`:m.date;
   meta.innerHTML=`<span>${status}</span><span>${m.venue||""}</span>`;
   d.appendChild(meta);
   return d;
@@ -341,9 +351,9 @@ function renderGroups(){
   for(const g of Object.keys(GROUPS)){
     const rows=GROUPS[g];
     const box=document.createElement("div"); box.className="grp";
-    let html=`<h3>Group ${g}<span>MP · W · D · L · GF · GA · GD · Pts</span></h3>
-      <table><thead><tr><th class="pos"></th><th style="text-align:left">Team</th>
-      <th>MP</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>`;
+    let html=`<h3>${L(g+"組","Group "+g)}<span>${L("場·勝·和·負·入·失·淨·分","MP · W · D · L · GF · GA · GD · Pts")}</span></h3>
+      <table><thead><tr><th class="pos"></th><th style="text-align:left">${L("球隊","Team")}</th>
+      <th>${L("場","MP")}</th><th>${L("勝","W")}</th><th>${L("和","D")}</th><th>${L("負","L")}</th><th>${L("入","GF")}</th><th>${L("失","GA")}</th><th>${L("淨","GD")}</th><th>${L("分","Pts")}</th></tr></thead><tbody>`;
     rows.forEach((row,i)=>{
       const [tk,W,D,L,GF,GA,Pts,q]=row;
       const mp=W+D+L, gd=GF-GA;
@@ -396,25 +406,25 @@ function renderPath(tk){
   const el=document.getElementById("pathEl");
   const chain=[]; let id=FIRST[tk];
   while(id){chain.push(id); id=PARENT[id];}
-  let html=`<div class="path-head">${fg(tk)} <b>${nm(tk)}</b> — Route to the Final</div>`;
+  let html=`<div class="path-head">${fg(tk)} <b>${nm(tk)}</b> ${L("· 晉級之路","— Route to the Final")}</div>`;
   chain.forEach((mid,i)=>{
     const m=M[mid];
     const a=slot(m,"a"), b=slot(m,"b");
     const opp = a===tk? slotLabel(m,"b") : slotLabel(m,"a");
     const oppTxt = opp.tbd? `<i style="color:var(--muted)">${opp.label}</i>` : `${fg(opp.team)} ${nm(opp.team)}`;
-    let state="pending", badge="Upcoming", res="";
+    let state="pending", badge=L("未賽","Upcoming"), res="";
     if(m.w){
-      if(m.w===tk){state="won";badge="Won";}
-      else{state="lost";badge="Out";}
+      if(m.w===tk){state="won";badge=L("晉級","Won");}
+      else{state="lost";badge=L("出局","Out");}
       const my=(a===tk?m.sa:m.sb), th=(a===tk?m.sb:m.sa);
-      res=`${my}–${th}${m.pens?` (pens ${a===tk?m.pens[0]+"–"+m.pens[1]:m.pens[1]+"–"+m.pens[0]})`:""}`;
-    } else if(m.st==="live"){state="pending";badge="Today";}
+      res=`${my}–${th}${m.pens?` (${L("十二碼","pens")} ${a===tk?m.pens[0]+"–"+m.pens[1]:m.pens[1]+"–"+m.pens[0]})`:""}`;
+    } else if(m.st==="live"){state="pending";badge=L("今日","Today");}
     const dotCls = m.w?(m.w===tk?"done":"now"):(m.st==="live"?"now":"");
     html+=`<div class="step">
       <div class="rail"><div class="dot ${dotCls}"></div>${i<chain.length-1?'<div class="bar"></div>':''}</div>
       <div class="card2 ${state}"><span class="badge">${badge}</span>
-        <div class="rnd">${RTITLES[m.r]} · ${m.date}</div>
-        <div class="vs">vs ${oppTxt}</div>
+        <div class="rnd">${RT(m.r)} · ${m.date}</div>
+        <div class="vs">${L("對","vs")} ${oppTxt}</div>
         <div class="res">${res?res+" · ":""}${m.venue}</div>
       </div></div>`;
   });
@@ -437,10 +447,10 @@ function renderSchedule(){
       const A=slotLabel(m,"a"), B=slotLabel(m,"b");
       const an=A.tbd?`<i style="color:var(--muted)">${A.label}</i>`:`${nm(A.team)} <span class="fg">${fg(A.team)}</span>`;
       const bn=B.tbd?`<i style="color:var(--muted)">${B.label}</i>`:`<span class="fg">${fg(B.team)}</span> ${nm(B.team)}`;
-      let mid="vs", cls="pending";
+      let mid=L("對","vs"), cls="pending";
       if(m.w){cls="";const p=m.pens?` <span style="font-size:10px">(${m.pens[0]}-${m.pens[1]})</span>`:"";
         mid=`${m.sa}–${m.sb}${p}`;}
-      else if(m.st==="live") mid=`<span class="tag-live">LIVE</span>`;
+      else if(m.st==="live") mid=`<span class="tag-live">${L("直播","LIVE")}</span>`;
       const aW = m.w && !A.tbd && m.w===A.team, bW = m.w && !B.tbd && m.w===B.team;
       const fx=document.createElement("div"); fx.className="fx"+(m.w?"":" pending");
       fx.innerHTML=`<span class="rc ${rcClass[m.r]}">${m.r}</span>
@@ -527,12 +537,46 @@ async function loadLive(){
   }
 }
 
+/* ---------------- LANGUAGE ---------------- */
+function setText(id,txt){const e=document.getElementById(id);if(e)e.innerHTML=txt;}
+function navLabel(v,txt){const e=document.querySelector(`nav button[data-v="${v}"]`);if(e)e.textContent=txt;}
+function applyLang(){
+  document.body.dataset.lang=LANG;
+  setText("h1El", `<span class="tro">🏆</span> ${L("2026 FIFA 世界盃","2026 FIFA World Cup")} <span class="tro">🏆</span>`);
+  setText("subEl", L("加拿大 · 墨西哥 · 美國 — 48 隊 · 16 場館 · 7月19日 MetLife 球場決賽",
+                     "Canada · Mexico · United States — 48 teams · 16 venues · Final July 19 at MetLife Stadium"));
+  setText("asofEl", L("2026 · 32強淘汰賽進行中","2026 · Round of 32 in progress"));
+  navLabel("bracket",  L("🏟️ 賽程樹","🏟️ Bracket"));
+  navLabel("groups",   L("📊 分組賽","📊 Group Stage"));
+  navLabel("path",     L("🧭 晉級路線","🧭 Route to Final"));
+  navLabel("schedule", L("📅 賽程","📅 Schedule"));
+  setText("hint-bracket", L("完整淘汰賽樹 — 32強到決賽。勝方以金色標示;6月28日–7月1日賽果已確認,7月2–3日賽事待踢。可左右捲動 →",
+    "Full knockout tree — Round of 32 through the Final. Winners are highlighted in gold; June 28–July 1 results are confirmed, July 2–3 matches are still to be played. Scroll horizontally →"));
+  setText("hint-groups", L('12 組最終積分榜。<b style="color:var(--gold)">首名</b> 及 <b style="color:var(--green)">次名</b> 直接晉級;8 支最佳 <b style="color:#4ba3c7">第三名</b> 亦晉級。',
+    'Final group standings for all 12 groups. <b style="color:var(--gold)">1st</b> &amp; <b style="color:var(--green)">2nd</b> auto-qualify; the 8 best <b style="color:#4ba3c7">3rd</b>-placed teams also advance.'));
+  setText("hint-path", L("揀一支球隊,睇佢通往 MetLife 球場決賽嘅路線。已出局球隊以刪除線標示。",
+    "Pick a team to trace its route to the final at MetLife Stadium. Eliminated teams are struck through."));
+  setText("hint-schedule", L("所有淘汰賽賽程(依日期排列),已踢嘅顯示賽果。",
+    "Every knockout fixture in chronological order, with results where played."));
+  setText("champLbl", L("🏆 冠軍","🏆 Champion"));
+  setText("footEl", L("為 worldcup-bracket 專案而建 · 資料來源:Wikipedia、Yahoo Sports、FOX Sports、NBC Sports。<br>分組賽果及32強對陣已確認;即時比數由 worldcup26.ir 自動更新。",
+    "Built for the worldcup-bracket project · Sources: Wikipedia, Yahoo Sports, FOX Sports, NBC Sports.<br>Group results &amp; Round-of-32 matchups confirmed; live scores auto-updated from worldcup26.ir."));
+  const lb=document.getElementById("langBtn"); if(lb) lb.textContent = LANG==="zh" ? "EN" : "中文";
+  renderGroups();          // group stage is final — rendered from stored data
+  renderAll();             // bracket / route / schedule reflect current LANG + data
+}
+
 /* init */
-renderGroups();          // group stage is final — rendered once from stored data
-renderAll();             // instant static paint (bracket / route / schedule)
+try{ LANG = localStorage.getItem("wc26-detail-lang") || "zh"; }catch(e){ LANG="zh"; }
+applyLang();             // static text + instant paint in chosen language
 loadLive();              // then pull live knockout scores
 setInterval(loadLive, 60000);
 document.getElementById("refreshBtn").onclick=loadLive;
+document.getElementById("langBtn").onclick=()=>{
+  LANG = LANG==="zh" ? "en" : "zh";
+  try{ localStorage.setItem("wc26-detail-lang", LANG); }catch(e){}
+  applyLang();
+};
 </script>
 </body>
 </html>
