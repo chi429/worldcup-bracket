@@ -43,8 +43,9 @@
 
   /* ---------- BRACKET ---------- */
   .bracket-wrap{overflow-x:auto;padding-bottom:16px}
-  .bracket{display:flex;gap:38px;min-width:1400px;align-items:stretch}
-  .round{display:flex;flex-direction:column;justify-content:space-around;flex:1;min-width:210px}
+  .bracket{display:flex;gap:44px;min-width:1480px;align-items:stretch;position:relative}
+  #bracketEl>svg.conns{position:absolute;left:0;top:0;pointer-events:none;z-index:0}
+  .round{display:flex;flex-direction:column;justify-content:space-around;flex:1;min-width:210px;position:relative;z-index:1}
   .round-title{position:sticky;top:64px;text-align:center;font-size:12px;letter-spacing:1.5px;
     text-transform:uppercase;color:var(--gold);margin-bottom:10px;font-weight:700}
   .match{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;
@@ -59,9 +60,10 @@
   .match .row.win{background:linear-gradient(90deg,rgba(31,157,91,.18),transparent)}
   .match .row.lose{opacity:.55}
   .match .row.tbd .nm{color:var(--muted);font-style:italic}
-  .match .meta{font-size:10.5px;color:var(--muted);padding:4px 10px;background:var(--panel);
-    display:flex;justify-content:space-between;gap:6px}
-  .pens{font-size:10px;color:var(--gold);padding:0 10px 5px;background:var(--panel)}
+  .match .meta{font-size:10.5px;color:var(--muted);padding:5px 10px;background:var(--panel);
+    display:flex;justify-content:space-between;gap:6px;border-top:1px solid var(--line)}
+  .match .meta .mt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pens{font-size:10px;color:var(--gold);padding:5px 10px;background:var(--panel);line-height:1.2}
   .tag-live{color:var(--live);font-weight:700}
   .final .match{border-color:var(--gold);box-shadow:0 0 18px rgba(245,197,66,.25)}
   .champ{margin-top:14px;text-align:center;background:var(--panel);border:1px dashed var(--line);
@@ -318,15 +320,52 @@ function renderBracket(){
   document.getElementById("champEl").innerHTML = fin.w
     ? `<span style="font-size:26px">${fg(fin.w)}</span> <b style="color:var(--gold)">${nm(fin.w)}</b>`
     : L("尚未產生 — 7月19日 · MetLife 球場","To be decided — July 19, MetLife Stadium");
+  requestAnimationFrame(drawConnectors);
+}
+// Draw SVG elbow connectors from each feeder match to its parent match.
+// Uses live element positions so it's robust to card height / spacing.
+function drawConnectors(){
+  const wrap=document.getElementById("bracketEl"); if(!wrap) return;
+  const old=wrap.querySelector("svg.conns"); if(old) old.remove();
+  const w=wrap.scrollWidth, h=wrap.scrollHeight;
+  if(!w || !h || wrap.offsetParent===null) return;   // not visible yet
+  const base=wrap.getBoundingClientRect();
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(NS,"svg");
+  svg.setAttribute("class","conns");
+  svg.setAttribute("width",w); svg.setAttribute("height",h);
+  svg.setAttribute("viewBox",`0 0 ${w} ${h}`);
+  const cardOf=id=>wrap.querySelector(`.match[data-mid="${id}"]`);
+  const pos=el=>{const r=el.getBoundingClientRect();
+    return {l:r.left-base.left, r:r.right-base.left, cy:r.top-base.top+r.height/2};};
+  Object.keys(M).forEach(pid=>{
+    const pm=M[pid]; if(!pm.fa && !pm.fb) return;
+    const pcard=cardOf(pid); if(!pcard) return;
+    const pp=pos(pcard);
+    [pm.fa,pm.fb].forEach(cid=>{
+      if(!cid) return; const cc=cardOf(cid); if(!cc) return;
+      const cp=pos(cc); const midX=(cp.r+pp.l)/2;
+      const path=document.createElementNS(NS,"path");
+      path.setAttribute("d",`M ${cp.r} ${cp.cy} H ${midX} V ${pp.cy} H ${pp.l}`);
+      path.setAttribute("fill","none");
+      path.setAttribute("stroke", (M[cid]&&M[cid].w) ? "rgba(224,179,74,.6)" : "#2f5a41");
+      path.setAttribute("stroke-width","2");
+      svg.appendChild(path);
+    });
+  });
+  wrap.insertBefore(svg, wrap.firstChild);
 }
 function matchCard(m,id){
-  const d=document.createElement("div"); d.className="match";
+  const d=document.createElement("div"); d.className="match"; d.dataset.mid=id;
   d.appendChild(sideRow(m,"a")); d.appendChild(sideRow(m,"b"));
   if(m.pens) {const p=document.createElement("div");p.className="pens";
     p.textContent=L(`十二碼 ${m.pens[0]}–${m.pens[1]}`,`Penalties ${m.pens[0]}–${m.pens[1]}`);d.appendChild(p);}
   const meta=document.createElement("div"); meta.className="meta";
-  const status = m.st==="live"?`<span class="tag-live">${L("● 直播/今日","● LIVE / TODAY")}</span>`:m.date;
-  meta.innerHTML=`<span>${status}</span><span>${m.venue||""}</span>`;
+  const dt = `${m.date||""}${m.time?" · "+m.time:""}`;
+  const left = m.st==="live"
+    ? `<span class="tag-live">${L("● 今日","● TODAY")}</span> ${dt}`
+    : dt;
+  meta.innerHTML=`<span class="mt">${left}</span><span class="mt">${m.venue||""}</span>`;
   d.appendChild(meta);
   return d;
 }
@@ -471,8 +510,10 @@ document.querySelectorAll("nav button").forEach(b=>{
     document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
     document.getElementById(b.dataset.v).classList.add("active");
+    if(b.dataset.v==="bracket") requestAnimationFrame(drawConnectors);
   };
 });
+window.addEventListener("resize",()=>requestAnimationFrame(drawConnectors));
 
 /* ---------------- LIVE UPDATE (same free API as the live view) ---------------- */
 function codeOf(m,side){const t=side==="a"?m.a:m.b;if(t)return t;
