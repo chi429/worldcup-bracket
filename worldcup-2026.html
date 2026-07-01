@@ -289,6 +289,29 @@ const ID={MEX:1,RSA:2,KOR:3,CZE:4,CAN:5,BIH:6,QAT:7,SUI:8,BRA:9,MAR:10,HAI:11,SC
   ARG:37,ALG:38,AUT:39,JOR:40,POR:41,COD:42,UZB:43,COL:44,ENG:45,CRO:46,GHA:47,PAN:48};
 const API_URL="https://worldcup26.ir/get/games";
 
+// Kickoff times (ISO, US/Canada local -04:00) — same source as the live view. Shown in HK time.
+const KO={
+  M73:"2026-06-28T15:00:00-04:00",M74:"2026-06-29T16:30:00-04:00",M75:"2026-06-29T21:00:00-04:00",
+  M76:"2026-06-29T13:00:00-04:00",M77:"2026-06-30T17:00:00-04:00",M78:"2026-06-30T13:00:00-04:00",
+  M79:"2026-06-30T21:00:00-04:00",M80:"2026-07-01T12:00:00-04:00",M81:"2026-07-01T20:00:00-04:00",
+  M82:"2026-07-01T16:00:00-04:00",M83:"2026-07-02T19:00:00-04:00",M84:"2026-07-02T15:00:00-04:00",
+  M85:"2026-07-02T23:00:00-04:00",M86:"2026-07-03T18:00:00-04:00",M87:"2026-07-03T21:30:00-04:00",
+  M88:"2026-07-03T14:00:00-04:00",M89:"2026-07-04T17:00:00-04:00",M90:"2026-07-04T13:00:00-04:00",
+  M91:"2026-07-05T16:00:00-04:00",M92:"2026-07-05T20:00:00-04:00",M93:"2026-07-06T15:00:00-04:00",
+  M94:"2026-07-06T20:00:00-04:00",M95:"2026-07-07T12:00:00-04:00",M96:"2026-07-07T16:00:00-04:00",
+  M97:"2026-07-09T16:00:00-04:00",M98:"2026-07-10T15:00:00-04:00",M99:"2026-07-11T17:00:00-04:00",
+  M100:"2026-07-11T21:00:00-04:00",M101:"2026-07-14T15:00:00-04:00",M102:"2026-07-15T15:00:00-04:00",
+  M104:"2026-07-19T15:00:00-04:00"};
+const WD={Mon:"一",Tue:"二",Wed:"三",Thu:"四",Fri:"五",Sat:"六",Sun:"日"};
+function hkParts(iso){const p={};
+  new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Hong_Kong",month:"numeric",day:"numeric",
+    hour:"2-digit",minute:"2-digit",hourCycle:"h23",weekday:"short"})
+    .formatToParts(new Date(iso)).forEach(x=>p[x.type]=x.value);return p;}
+function hkWd(p){return LANG==="zh"?(WD[p.weekday]||p.weekday):p.weekday;}
+function hkDate(iso){if(!iso)return"";const p=hkParts(iso);return `${p.month}/${p.day}(${hkWd(p)})`;}
+function hkTime(iso){if(!iso)return"";const p=hkParts(iso);return `${p.hour}:${p.minute}`;}
+function hkDateTime(iso){if(!iso)return"";const p=hkParts(iso);return `${p.month}/${p.day}(${hkWd(p)}) ${p.hour}:${p.minute}`;}
+
 /* resolve a match slot to a team key (or null if unknown) */
 function slot(m,side){
   const t = side==="a"?m.a:m.b;
@@ -361,7 +384,7 @@ function matchCard(m,id){
   if(m.pens) {const p=document.createElement("div");p.className="pens";
     p.textContent=L(`十二碼 ${m.pens[0]}–${m.pens[1]}`,`Penalties ${m.pens[0]}–${m.pens[1]}`);d.appendChild(p);}
   const meta=document.createElement("div"); meta.className="meta";
-  const dt = `${m.date||""}${m.time?" · "+m.time:""}`;
+  const dt = KO[id] ? hkDateTime(KO[id]) : `${m.date||""}${m.time?" · "+m.time:""}`;
   const left = m.st==="live"
     ? `<span class="tag-live">${L("● 今日","● TODAY")}</span> ${dt}`
     : dt;
@@ -462,7 +485,7 @@ function renderPath(tk){
     html+=`<div class="step">
       <div class="rail"><div class="dot ${dotCls}"></div>${i<chain.length-1?'<div class="bar"></div>':''}</div>
       <div class="card2 ${state}"><span class="badge">${badge}</span>
-        <div class="rnd">${RT(m.r)} · ${m.date}</div>
+        <div class="rnd">${RT(m.r)} · ${KO[mid]?hkDate(KO[mid]):m.date}</div>
         <div class="vs">${L("對","vs")} ${oppTxt}</div>
         <div class="res">${res?res+" · ":""}${m.venue}</div>
       </div></div>`;
@@ -475,8 +498,9 @@ function renderSchedule(){
   const el=document.getElementById("schedEl"); el.innerHTML="";
   const allIds=["M73","M74","M75","M76","M77","M78","M79","M80","M81","M82","M83","M84","M85","M86","M87","M88",
     ...ORDER.R16,...ORDER.QF,...ORDER.SF,"M104"];
+  allIds.sort((a,b)=> new Date(KO[a]) - new Date(KO[b]));   // chronological by HK/real time
   const byDay={};
-  allIds.forEach(id=>{const m=M[id]; (byDay[m.date]=byDay[m.date]||[]).push(id);});
+  allIds.forEach(id=>{const day=KO[id]?hkDate(KO[id]):M[id].date; (byDay[day]=byDay[day]||[]).push(id);});
   const rcClass={R32:"r32",R16:"r16",QF:"qf",SF:"sf",F:"f"};
   for(const day of Object.keys(byDay)){
     const wrap=document.createElement("div"); wrap.className="day";
@@ -496,7 +520,7 @@ function renderSchedule(){
         <span class="side a ${aW?'w':(m.w?'l':'')}">${an}</span>
         <span class="mid">${mid}</span>
         <span class="side b ${bW?'w':(m.w?'l':'')}">${bn}</span>
-        <span class="venue">${m.time} · ${m.venue}</span>`;
+        <span class="venue">${KO[id]?hkTime(KO[id]):m.time} · ${m.venue}</span>`;
       wrap.appendChild(fx);
     });
     el.appendChild(wrap);
@@ -591,14 +615,14 @@ function applyLang(){
   navLabel("groups",   L("📊 分組賽","📊 Group Stage"));
   navLabel("path",     L("🧭 晉級路線","🧭 Route to Final"));
   navLabel("schedule", L("📅 賽程","📅 Schedule"));
-  setText("hint-bracket", L("完整淘汰賽樹 — 32強到決賽。勝方以金色標示;6月28日–7月1日賽果已確認,7月2–3日賽事待踢。可左右捲動 →",
-    "Full knockout tree — Round of 32 through the Final. Winners are highlighted in gold; June 28–July 1 results are confirmed, July 2–3 matches are still to be played. Scroll horizontally →"));
+  setText("hint-bracket", L("完整淘汰賽樹 — 32強到決賽。勝方以金色標示,時間為香港時間。可左右捲動 →",
+    "Full knockout tree — Round of 32 through the Final. Winners highlighted in gold; all times in HK time. Scroll horizontally →"));
   setText("hint-groups", L('12 組最終積分榜。<b style="color:var(--gold)">首名</b> 及 <b style="color:var(--green)">次名</b> 直接晉級;8 支最佳 <b style="color:#4ba3c7">第三名</b> 亦晉級。',
     'Final group standings for all 12 groups. <b style="color:var(--gold)">1st</b> &amp; <b style="color:var(--green)">2nd</b> auto-qualify; the 8 best <b style="color:#4ba3c7">3rd</b>-placed teams also advance.'));
   setText("hint-path", L("揀一支球隊,睇佢通往 MetLife 球場決賽嘅路線。已出局球隊以刪除線標示。",
     "Pick a team to trace its route to the final at MetLife Stadium. Eliminated teams are struck through."));
-  setText("hint-schedule", L("所有淘汰賽賽程(依日期排列),已踢嘅顯示賽果。",
-    "Every knockout fixture in chronological order, with results where played."));
+  setText("hint-schedule", L("所有淘汰賽賽程(依港時排列),已踢嘅顯示賽果。時間為香港時間。",
+    "Every knockout fixture in chronological order (HK time), with results where played."));
   setText("champLbl", L("🏆 冠軍","🏆 Champion"));
   setText("footEl", L("為 worldcup-bracket 專案而建 · 資料來源:Wikipedia、Yahoo Sports、FOX Sports、NBC Sports。<br>分組賽果及32強對陣已確認;即時比數由 worldcup26.ir 自動更新。",
     "Built for the worldcup-bracket project · Sources: Wikipedia, Yahoo Sports, FOX Sports, NBC Sports.<br>Group results &amp; Round-of-32 matchups confirmed; live scores auto-updated from worldcup26.ir."));
