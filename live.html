@@ -351,35 +351,51 @@ function parseScorers(s){
   while((m=re.exec(s))!==null){ out.push(m[1].trim()); }
   return out;
 }
-// Derive the phase (上/下半場、加時、半場休息…) and elapsed-minute label from the
-// feed's time_elapsed field. Returns {half, min, text}; text is the combined
-// label to show, e.g. "下半場 67'".
-function liveClock(g){
-  if(!g || g.time_elapsed==null) return {half:"", min:"", text:""};
-  const te=String(g.time_elapsed).trim();
-  const low=te.toLowerCase();
-  if(/^\d+$/.test(te)){
-    const n=parseInt(te,10);
-    let half;
-    if(n<=45) half="上半場";
-    else if(n<=90) half="下半場";
-    else if(n<=105) half="加時上半場";
-    else if(n<=120) half="加時下半場";
-    else half="加時";
-    const min=n+"'";
-    return {half, min, text:`${half} ${min}`};
+// Live match clock. The feed's time_elapsed is only a coarse status
+// ("live"/"finished"/"notstarted"), not a minute — so when it isn't a real
+// number we compute a running clock from the scheduled kickoff (ko). Returns a
+// combined label like "下半場 67:12" that ticks in real time.
+// te = raw feed time_elapsed, ko = kickoff ISO string.
+function computeClock(te, ko){
+  const raw=(te==null?"":String(te)).trim();
+  const low=raw.toLowerCase();
+  // If a feed ever gives a real minute, trust it.
+  if(/^\d+$/.test(raw)){
+    const n=parseInt(raw,10);
+    const half=n<=45?"上半場":n<=90?"下半場":n<=105?"加時上半場":n<=120?"加時下半場":"加時";
+    return {text:`${half} ${n}'`};
   }
-  if(low==="ht"||low==="bt"||low==="break") return {half:"半場休息", min:"", text:"半場休息"};
-  if(low==="et") return {half:"加時", min:"", text:"加時"};
-  if(low==="p"||low==="pen"||low==="pens"||low==="penalties"||low==="pk") return {half:"互射十二碼", min:"", text:"互射十二碼"};
-  if(low==="notstarted"||low==="finished"||low==="live"||!te) return {half:"", min:"", text:""};
-  return {half:"", min:te, text:te};
+  if(low==="ht"||low==="bt"||low==="break") return {text:"半場休息"};
+  if(low==="et") return {text:"加時"};
+  if(low==="p"||low==="pen"||low==="pens"||low==="penalties"||low==="pk") return {text:"互射十二碼"};
+  if(low==="notstarted"||low==="finished") return {text:""};
+  // Otherwise (feed says just "live") — derive a ticking clock from kickoff.
+  if(ko){
+    const t=new Date(ko).getTime();
+    if(!isNaN(t)){
+      const sec=Math.floor((Date.now()-t)/1000);
+      const HALF=45*60, BREAK=15*60, fmt=(half,d)=>({text:`${half} ${Math.floor(d/60)}:${String(d%60).padStart(2,"0")}`});
+      if(sec<0) return {text:""};
+      if(sec<HALF) return fmt("上半場", sec);              // 0:00–45:00
+      if(sec<HALF+BREAK) return {text:"半場休息"};          // 15-min interval
+      if(sec<2*HALF+BREAK+15*60) return fmt("下半場", sec-BREAK); // continues from 45:00, allows stoppage
+      return {text:"進行中"};                               // feed stale / beyond — avoid runaway
+    }
+  }
+  if(low==="notstarted"||low==="finished"||low==="") return {text:""};
+  return {text:raw};
 }
-// Backward-compatible minute label used elsewhere.
-function liveMinute(g){ return liveClock(g).min; }
+// Refresh every live clock chip on the page (called every second).
+function tickClock(){
+  document.querySelectorAll(".live-clock").forEach(el=>{
+    const t=computeClock(el.dataset.te, el.dataset.ko).text;
+    el.textContent = t ? "⏱ "+t : "";
+    el.hidden = !t;
+  });
+}
 function liveCardHTML(m, st, g){
-  const clock=liveClock(g);
-  const clockChip=clock.text?`<span class="fl-min">⏱ ${clock.text}</span>`:"";
+  const teAttr=g&&g.time_elapsed!=null?String(g.time_elapsed):"";
+  const clockChip=`<span class="fl-min live-clock" data-te="${teAttr}" data-ko="${m.ko||""}"></span>`;
   const home=resolveTeam(m,"home",g), away=resolveTeam(m,"away",g);
   const hsc=g?parseScorers(g.home_scorers):[];
   const asc=g?parseScorers(g.away_scorers):[];
@@ -529,7 +545,7 @@ function render(liveById){
       const homePanel = hasFinished(homeId)?`<div class="journey" id="jr-${m.id}-h" hidden>${journeyHTML(homeId)}</div>`:"";
       const awayPanel = hasFinished(awayId)?`<div class="journey" id="jr-${m.id}-a" hidden>${journeyHTML(awayId)}</div>`:"";
       let cls="tbd", badge=`<span class="badge tbd">未開賽</span>`;
-      if(st.livenow){cls="livenow"; const ck=liveClock(g); badge=`<span class="badge-grp">${ck.text?`<span class="live-min">⏱ ${ck.text}</span>`:""}<span class="badge livenow">● 進行中</span></span>`;}
+      if(st.livenow){cls="livenow"; const teA=g&&g.time_elapsed!=null?String(g.time_elapsed):""; badge=`<span class="badge-grp"><span class="live-min live-clock" data-te="${teA}" data-ko="${m.ko||""}"></span><span class="badge livenow">● 進行中</span></span>`;}
       else if(st.done){cls="done"; badge=st.pk&&/PK/.test(st.pk)?`<span class="badge pk">PK大戰</span>`:`<span class="badge done">已完場</span>`;}
       else if(st.today){cls="today"; badge=`<span class="badge today">今日</span>`;}
 
@@ -569,6 +585,7 @@ function render(liveById){
   renderFocus(liveById);
   wireNav();
   tickCd();
+  tickClock();
 }
 
 function setStatus(kind, text){
@@ -679,6 +696,8 @@ updateToTop();
 
 loadLive();
 setInterval(tickCd, 30000);
+// Tick the live match clocks every second so they run like a real timer.
+setInterval(tickClock, 1000);
 // Auto-refresh the live feed so matches expand to the on-going card at kickoff
 // without needing a manual refresh. Silent = no loading flash, and it only
 // re-renders when the data actually changed.
