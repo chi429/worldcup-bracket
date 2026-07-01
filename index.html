@@ -113,6 +113,7 @@
   .lb-name{flex:1;display:flex;align-items:center;gap:7px;}
   .lb-team{flex:0 0 auto;color:var(--muted);font-size:11px;min-width:52px;text-align:right;}
   .lb-goals{flex:0 0 36px;text-align:right;font-weight:800;color:var(--gold-soft);font-size:15px;}
+  .lb-sec{font-size:12.5px;font-weight:800;color:var(--gold-soft);margin:14px 0 6px;letter-spacing:.3px;}
   .gl-title{font-size:10.5px;color:var(--gold-soft);font-weight:700;margin-bottom:4px;}
   .gl-row{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text);padding:1.5px 0;}
   .gl-team{flex:0 0 auto;}
@@ -410,22 +411,34 @@ function addGoal(tally, entry, tid){
   if(!tally[key]) tally[key]={name, tid, goals:0};
   tally[key].goals++;
 }
-function scorerBoardHTML(liveById){
-  const tally={};
-  Object.keys(liveById).forEach(id=>{
-    const g=liveById[id];
-    parseScorers(g.home_scorers).forEach(e=>addGoal(tally,e,g.home_team_id));
-    parseScorers(g.away_scorers).forEach(e=>addGoal(tally,e,g.away_team_id));
-  });
-  const arr=Object.values(tally).sort((a,b)=> b.goals-a.goals || a.name.localeCompare(b.name));
-  let rows="";
-  arr.forEach((p,i)=>{
-    rows+=`<div class="lb-row"><span class="lb-rank">${i+1}</span><span class="lb-name">${FLAG[p.tid]||""} ${p.name}</span><span class="lb-team">${ZH[p.tid]||""}</span><span class="lb-goals">${p.goals}</span></div>`;
-  });
-  if(!arr.length) rows=`<div class="jr-empty">暫無入球資料</div>`;
-  return `<div class="round-head"><h2>射手榜 (Top Scorers)</h2><span>${arr.length} 位入球球員</span></div>`
-    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-team">球隊</span><span class="lb-goals">入球</span></div>`
-    + rows;
+// Accurate figures from HKET (香港經濟日報) worldcup2026 statistics page — dated snapshot.
+const TOP_SCORERS=[
+  {r:1,name:"基利安·姆巴佩",flag:"🇫🇷",g:6},
+  {r:1,name:"梅西",flag:"🇦🇷",g:6},
+  {r:3,name:"厄林·布朗特·哈蘭德",flag:"🇳🇴",g:5},
+  {r:4,name:"維尼修斯·儒尼奧爾",flag:"🇧🇷",g:4},
+  {r:4,name:"烏斯曼·登貝萊",flag:"🇫🇷",g:4},
+];
+const TOP_ASSISTS=[
+  {r:1,name:"麥可·奧利塞",flag:"🇫🇷",g:5},
+  {r:2,name:"布魯諾·吉馬良斯",flag:"🇧🇷",g:4},
+  {r:3,name:"亞歷山大·伊沙克",flag:"🇸🇪",g:3},
+  {r:3,name:"弗洛里安·維爾茨",flag:"🇩🇪",g:3},
+  {r:3,name:"馬丁·厄德高",flag:"🇳🇴",g:3},
+];
+const SCORER_ASOF="7/2";
+function lbRows(list){
+  return list.map(p=>`<div class="lb-row"><span class="lb-rank">${p.r}</span><span class="lb-name">${p.flag} ${p.name}</span><span class="lb-goals">${p.g}</span></div>`).join("");
+}
+function scorerBoardHTML(){
+  return `<div class="round-head"><h2>射手榜 & 助攻榜</h2><span>頭5名</span></div>`
+    + `<div class="lb-sec">⚽ 射手榜</div>`
+    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-goals">入球</span></div>`
+    + lbRows(TOP_SCORERS)
+    + `<div class="lb-sec">🅰️ 助攻榜</div>`
+    + `<div class="lb-head"><span class="lb-rank">#</span><span class="lb-name">球員</span><span class="lb-goals">助攻</span></div>`
+    + lbRows(TOP_ASSISTS)
+    + `<div class="jr-empty" style="margin-top:14px">資料來源：香港經濟日報 HKET · 截至 ${SCORER_ASOF}</div>`;
 }
 
 function render(liveById){
@@ -480,7 +493,7 @@ function render(liveById){
   }
   const lb=document.createElement("section");
   lb.className="round";
-  lb.innerHTML=scorerBoardHTML(liveById);
+  lb.innerHTML=scorerBoardHTML();
   main.appendChild(lb);
   renderFocus(liveById);
   wireNav();
