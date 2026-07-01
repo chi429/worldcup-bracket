@@ -489,7 +489,14 @@ function render(liveById){
     const sec = document.createElement("section");
     sec.className = "round";
     sec.innerHTML = `<div class="round-head"><h2>${ROUND_META[r].title}</h2><span>${ROUND_META[r].note}</span></div>`;
-    MATCHES.filter(m=>m.round===r).forEach(m=>{
+    MATCHES.filter(m=>m.round===r)
+      .slice()
+      .sort((a,b)=>{  // latest kickoff first; undated (TBD) matches last
+        const ta=a.ko?new Date(a.ko).getTime():-Infinity;
+        const tb=b.ko?new Date(b.ko).getTime():-Infinity;
+        return tb-ta;
+      })
+      .forEach(m=>{
       const st = resolveMatch(m, liveById);
       const g = liveById[String(m.id)];
       const homeId = g ? g.home_team_id : null;
