@@ -77,7 +77,12 @@
 
   function ensureLoaded(mode){
     const f = frames[mode];
-    if(!loaded[mode]){ f.src = f.dataset.src; loaded[mode] = true; }
+    if(!loaded[mode]){
+      const s = f.dataset.src;
+      // cache-bust so GitHub Pages / browser always serve the newest version
+      f.src = s + (s.indexOf("?")>=0 ? "&" : "?") + "v=" + Date.now();
+      loaded[mode] = true;
+    }
   }
 
   function setMode(mode){
