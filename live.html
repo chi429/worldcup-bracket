@@ -447,28 +447,35 @@ function renderFocus(liveById){
 
 function goalPlayer(entry){
   let s=String(entry).trim();
-  s=s.replace(/\s+\d+(\+\d+)?\s*['’]?\s*(\(?pen\.?\)?|\(?p\)?|\(?og\)?|o\.?g\.?)?$/i,"").trim();
-  return s;
+  // Own goals count for the team but are not credited to the (opposing) player.
+  if(/\(\s*og\s*\)|\bo\.?g\.?\b/i.test(s)) return "";
+  // Cut at the minute mark — handles 89', 12'(p), 45'+5', 90'+8', 125(P)'.
+  const i=s.search(/\s\d/);
+  if(i>=0) s=s.slice(0,i);
+  return s.replace(/[\d'’+()]+$/,"").trim();
 }
 function addGoal(tally, entry, tid){
-  const name=goalPlayer(entry);
+  const name=fixName(goalPlayer(entry));
   if(!name) return;
   const key=name+"|"+tid;
   if(!tally[key]) tally[key]={name, tid, goals:0};
   tally[key].goals++;
 }
 // The live feed round-trips some names through Persian and mangles the rarer
-// ones; this map restores the correct spelling and normalises accents to ASCII.
+// ones; this map restores the correct spelling. Accents are then normalised
+// to ASCII generically so "Mbappé" and "Mbappe" always tally together.
 const NAME_FIX={
-  "Kylian Mbappé":"Kylian Mbappe",
-  "Ousmane Dembélé":"Ousmane Dembele",
-  "Ismaïla Sarr":"Ismaila Sarr",
-  "Vinícius Júnior":"Vinicius Junior",
   "Hri Kin":"Harry Kane",
   "Kvdi Khakpv":"Cody Gakpo",
   "Jvhan Mnzambi":"Johan Manzambi",
+  "Rvbn Vargas":"Ruben Vargas",
+  "Kail Larin":"Cyle Larin",
+  "Asmaail Saibari":"Ismael Saibari",
 };
-function fixName(n){ return NAME_FIX[n] || n; }
+function fixName(n){
+  n=NAME_FIX[n]||n;
+  return n.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
 const SCORER_LIMIT=12; // show every player with 3+ goals (matches source ranking)
 
 // Assists — the live feed carries no assist data, so this board stays curated.
@@ -481,11 +488,13 @@ const TOP_ASSISTS=[
 ];
 // Fallback scorers if the live feed is unavailable.
 const TOP_SCORERS_FB=[
+  {name:"Kylian Mbappe",flag:"🇫🇷",team:"法國",g:6},
   {name:"Lionel Messi",flag:"🇦🇷",team:"阿根廷",g:6},
   {name:"Erling Haaland",flag:"🇳🇴",team:"挪威",g:5},
-  {name:"Kylian Mbappe",flag:"🇫🇷",team:"法國",g:4},
+  {name:"Harry Kane",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",team:"英格蘭",g:5},
+  {name:"Ismaila Sarr",flag:"🇸🇳",team:"塞內加爾",g:4},
   {name:"Ousmane Dembele",flag:"🇫🇷",team:"法國",g:4},
-  {name:"Brian Brobbey",flag:"🇳🇱",team:"荷蘭",g:3},
+  {name:"Vinicius Junior",flag:"🇧🇷",team:"巴西",g:4},
 ];
 const SCORER_ASOF="7/2";
 
@@ -499,12 +508,23 @@ function scorerBoardHTML(liveById){
     parseScorers(g.home_scorers).forEach(e=>addGoal(tally,e,g.home_team_id));
     parseScorers(g.away_scorers).forEach(e=>addGoal(tally,e,g.away_team_id));
   });
-  const arr=Object.values(tally).map(p=>({name:fixName(p.name),flag:FLAG[p.tid]||"",team:ZH[p.tid]||"",g:p.goals}));
+  // The feed abbreviates names in group games ("K. Mbappe") but uses full
+  // names in knockouts ("Kylian Mbappe") — merge each abbreviated entry into
+  // its full-name teammate so goals aren't split across two rows.
+  const list=Object.values(tally);
+  list.filter(p=>/^[A-Z]{1,2}\.\s*\S/.test(p.name)).forEach(a=>{
+    const m=a.name.match(/^([A-Z])[A-Z]?\.\s*(.+)$/); if(!m) return;
+    const full=list.find(p=>p!==a && p.tid===a.tid && !/^[A-Z]{1,2}\./.test(p.name)
+      && p.name[0]===m[1] && p.name.endsWith(" "+m[2]));
+    if(full){ full.goals+=a.goals; a.goals=0; }
+  });
+  const arr=list.filter(p=>p.goals>0).map(p=>({name:p.name,flag:FLAG[p.tid]||"",team:ZH[p.tid]||"",g:p.goals}));
   const total=arr.length;
   let rows, headCount;
   if(total){
     arr.sort((a,b)=> b.g-a.g || a.name.localeCompare(b.name));
-    rows=arr.slice(0,SCORER_LIMIT).map((p,i)=>boardRow(i+1,p.flag,p.name,p.team,p.g)).join("");
+    const nShow=Math.max(SCORER_LIMIT, arr.filter(p=>p.g>=3).length); // never cut off mid-tie at 3 goals
+    rows=arr.slice(0,nShow).map((p,i)=>boardRow(i+1,p.flag,p.name,p.team,p.g)).join("");
     headCount=`${total} 位入球球員`;
   }else{
     rows=TOP_SCORERS_FB.map((p,i)=>boardRow(i+1,p.flag,p.name,p.team,p.g)).join("");
