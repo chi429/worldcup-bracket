@@ -620,6 +620,32 @@ function fmtTime(){
 }
 
 let lastSig = "";
+// Most recent SUCCESSFUL API snapshot. When the free source hiccups we keep
+// showing this instead of reverting to the older baked-in fallback snapshot.
+let lastGoodById = null;
+let lastGoodTime = "";
+const LS_KEY = "wc26-lastgood";
+function buildTeamGames(byId){
+  const tg={};
+  Object.values(byId).forEach(g=>{
+    if(g.home_team_id){(tg[g.home_team_id]=tg[g.home_team_id]||[]).push(g);}
+    if(g.away_team_id){(tg[g.away_team_id]=tg[g.away_team_id]||[]).push(g);}
+  });
+  TEAM_GAMES = tg;
+}
+// Rehydrate the last successful fetch so a fresh page load during an outage
+// still shows the freshest known scores rather than the baked-in snapshot.
+try{
+  const raw = localStorage.getItem(LS_KEY);
+  if(raw){
+    const saved = JSON.parse(raw);
+    if(saved && saved.byId && Object.keys(saved.byId).length){
+      lastGoodById = saved.byId;
+      lastGoodTime = saved.time || "稍早";
+      buildTeamGames(lastGoodById);
+    }
+  }
+}catch(e){}
 // Signature of the fields that affect what we render; lets the silent
 // auto-refresh skip a full re-render (which would reset scroll/open panels)
 // when nothing meaningful changed.
@@ -633,7 +659,12 @@ function liveSig(byId){
 async function loadLive(silent){
   if(!silent) setStatus("loading","正在載入最新比數…");
   try{
-    const res = await fetch(API_URL, {cache:"no-store"});
+    // Abort a stalled request instead of hanging on a slow/unresponsive source.
+    const ctrl = new AbortController();
+    const to = setTimeout(()=>ctrl.abort(), 8000);
+    let res;
+    try{ res = await fetch(API_URL, {cache:"no-store", signal:ctrl.signal}); }
+    finally{ clearTimeout(to); }
     if(!res.ok) throw new Error("HTTP "+res.status);
     const data = await res.json();
     // API may wrap games in {games:[...]}, {data:[...]}, or return array directly
@@ -652,6 +683,10 @@ async function loadLive(silent){
     });
     TEAM_GAMES = tg;
     if(Object.keys(byId).length===0) throw new Error("no games in response");
+    // Remember this good snapshot so a later failed fetch doesn't revert us.
+    lastGoodById = byId;
+    lastGoodTime = fmtTime();
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({byId, time:lastGoodTime})); }catch(e){}
     const sig = liveSig(byId);
     // On a silent auto-refresh, only re-render when the data actually changed
     // so we don't disturb the user's scroll position or open journey panels.
@@ -665,10 +700,22 @@ async function loadLive(silent){
     document.getElementById("footer").innerHTML =
       "比數由免費開放資料來源自動更新。如來源暫時無法連接，會顯示已儲存的最後正確賽果。淘汰賽對賽組合按FIFA官方賽程(第73–104場)。";
   }catch(err){
-    render({}); // fallback only
-    setStatus("stale", `暫時無法連接即時資料 · 顯示已儲存賽果`);
-    document.getElementById("footer").innerHTML =
-      "⚠️ 即時資料來源暫時無法連接，以下為已儲存的最後正確賽果。可稍後按「重新整理」再試。";
+    // Don't revert to the older baked-in snapshot. Prefer the last successful
+    // fetch. On a silent background refresh, leave the current DOM untouched
+    // (keeps scroll/open panels) — only re-render on an explicit/initial load.
+    if(!silent){
+      if(lastGoodById){ buildTeamGames(lastGoodById); render(lastGoodById); }
+      else render({}); // never got live data → baked-in snapshot
+    }
+    if(lastGoodById){
+      setStatus("stale", `暫時無法連接即時資料 · 顯示上次更新 (${lastGoodTime||"稍早"})`);
+      document.getElementById("footer").innerHTML =
+        "⚠️ 即時資料來源暫時無法連接，顯示上次成功更新嘅比數。可稍後按「重新整理」再試。";
+    }else{
+      setStatus("stale", `暫時無法連接即時資料 · 顯示已儲存賽果`);
+      document.getElementById("footer").innerHTML =
+        "⚠️ 即時資料來源暫時無法連接，以下為已儲存的最後正確賽果。可稍後按「重新整理」再試。";
+    }
   }
 }
 
